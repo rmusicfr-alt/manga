@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Fox Manga - Админ-панель</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --primary-color: #dc2626;
+            --primary-hover: #b91c1c;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --secondary-color: #64748b;
+            --donation-color: #8b5cf6;
+            --donation-hover: #7c3aed;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --header-height: 70px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .admin-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: var(--card-bg);
+            border-bottom: 2px solid var(--primary-color);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .admin-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-right: 24px;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 20px;
+            margin-right: auto;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(220, 38, 38, 0.05);
+        }
+
+        .nav-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .nav-btn.donations {
+            background: var(--donation-color);
+            color: white;
+            border-color: var(--donation-color);
+        }
+
+        .nav-btn.donations:hover {
+            background: var(--donation-hover);
+            border-color: var(--donation-hover);
+        }
+
+        .nav-btn.donations.active {
+            background: var(--donation-hover);
+            border-color: var(--donation-hover);
+        }
+
+        .admin-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logout-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: var(--header-height);
+            padding: 24px;
+            min-height: calc(100vh - var(--header-height));
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Content Sections */
+        .content-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .section-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .section-content {
+            padding: 24px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--border-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-donation {
+            background: var(--donation-color);
+            color: white;
+        }
+
+        .btn-donation:hover {
+            background: var(--donation-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+        }
+
+        /* Users Management Styles */
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .user-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .user-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        .user-info p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .user-stat {
+            text-align: center;
+            padding: 10px;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .user-stat-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .user-stat-label {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+        }
+
+        .user-devices {
+            margin-bottom: 15px;
+        }
+
+        .user-devices h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .device-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: var(--bg-color);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .device-icon {
+            font-size: 0.9rem;
+        }
+
+        .device-status {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .device-status.online {
+            background: #10b981;
+            color: white;
+        }
+
+        .device-status.offline {
+            background: #6b7280;
+            color: white;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .user-action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-action-btn:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(255, 138, 80, 0.05);
+        }
+
+        .user-action-btn.danger:hover {
+            border-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.05);
+            color: #ef4444;
+        }
+
+        /* Users Stats Cards */
+        .users-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .users-stat-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .users-stat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .users-stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .users-stat-label {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        /* Search and Filter */
+        .users-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 138, 80, 0.1);
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(255, 138, 80, 0.05);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Modal для деталей пользователя */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .modal-close:hover {
+            color: var(--text-color);
+        }
+
+        .user-detail-section {
+            margin-bottom: 25px;
+        }
+
+        .user-detail-section h3 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 0.9rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        /* Other existing styles from the original admin panel... */
+        .manga-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .manga-item {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .manga-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .manga-item-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .manga-item-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .manga-item-meta {
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+        }
+
+        .manga-item-actions {
+            padding: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Status Badge Styles */
+        .status-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .status-badge.completed {
+            background: #10b981;
+        }
+
+        .status-badge.ongoing {
+            background: #f59e0b;
+        }
+
+        .status-badge.paused {
+            background: #3b82f6;
+        }
+
+        .status-badge.announced {
+            background: #8b5cf6;
+        }
+
+        .status-badge.licensed {
+            background: #ef4444;
+        }
+
+        .status-badge.active {
+            background: #10b981;
+        }
+
+        .status-badge.inactive {
+            background: #64748b;
+        }
+
+        /* ADD FROM FIRST VERSION - Form styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.875rem;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            background: var(--card-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .form-checkbox input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        /* Tags Input */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .tag-remove:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Image Preview */
+        .image-preview {
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Episodes Manager */
+        .episodes-manager {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--bg-color);
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+        }
+
+        .episodes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .episodes-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-episode-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-episode-btn:hover {
+            background: #047857;
+            transform: translateY(-1px);
+        }
+
+        .episodes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .episode-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .episode-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        .episode-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .chapter-range-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chapter-input {
+            width: 60px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .episode-title-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            width: 100%;
+        }
+
+        .episode-url-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+        }
+
+        .episode-url-input:focus {
+            border-color: var(--success-color);
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+        }
+
+        .episode-url-input.filled {
+            border-color: var(--success-color);
+            background: rgba(5, 150, 105, 0.05);
+        }
+
+        .episode-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-episode-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .remove-episode-btn:hover {
+            background: #dc2626;
+        }
+
+        .episode-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .episode-status.ready {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success-color);
+        }
+
+        .episode-status.empty {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--secondary-color);
+        }
+
+        .episodes-summary {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+        }
+
+        .episodes-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--secondary-color);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .episodes-empty h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        /* Auto-numbering */
+        .auto-number-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .auto-number-btn {
+            background: var(--warning-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .auto-number-btn:hover {
+            background: #b45309;
+        }
+
+        /* Donation Projects */
+        .donation-projects-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .donation-project-item {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+            border: 1px solid var(--border-color);
+        }
+
+        .donation-project-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--donation-color);
+        }
+
+        .donation-project-header {
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .donation-project-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .donation-project-poster {
+            width: 50px;
+            height: 70px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+
+        .donation-project-details {
+            flex: 1;
+        }
+
+        .donation-project-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-color);
+        }
+
+        .donation-project-manga {
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+        }
+
+        .donation-progress {
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--donation-color), var(--donation-hover));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--secondary-color);
+        }
+
+        .donation-project-actions {
+            padding: 16px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quick-update {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .quick-amount-input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .quick-update-btn {
+            padding: 4px 8px;
+            background: var(--donation-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-update-btn:hover {
+            background: var(--donation-hover);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .notification.error {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .notification.warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        /* Login Form */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-color);
+        }
+
+        .login-form {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-color);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-nav {
+                gap: 10px;
+            }
+            
+            .nav-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+
+            .users-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .users-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                min-width: auto;
+            }
+
+            .episode-header {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .chapter-range-inputs {
+                justify-content: center;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .donation-projects-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <form class="login-form" id="loginForm">
+            <h2 class="login-title">🔥 Админ-панель</h2>
+            <input type="password" class="login-input" id="passwordInput" placeholder="Введите пароль" required>
+            <button type="submit" class="login-btn">Войти</button>
+        </form>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-logo">🔥 ADMIN</div>
+            
+            <nav class="admin-nav">
+                <button class="nav-btn active" onclick="showSection('dashboard')">Обзор</button>
+                <button class="nav-btn" onclick="showSection('users')">👥 Пользователи</button>
+                <button class="nav-btn" onclick="showSection('manga-list')">Тайтлы</button>
+                <button class="nav-btn" onclick="showSection('add-manga')">Добавить</button>
+                <button class="nav-btn donations" onclick="showSection('donations')">💰 Донаты</button>
+            </nav>
+            
+            <div class="admin-controls">
+                <a href="index.html" class="btn btn-secondary">🌐 На сайт</a>
+                <button class="logout-btn" onclick="logout()">Выйти</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="content-section active">
+                    <div class="section-header">
+                        <h2 class="section-title">Панель управления</h2>
+                    </div>
+                    <div class="section-content">
+                        <div class="dashboard-grid" id="dashboardStats">
+                            <!-- Статистика будет сгенерирована JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div id="users-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Управление пользователями</h2>
+                    </div>
+                    <div class="section-content">
+                        <!-- Статистика пользователей -->
+                        <div class="users-stats-grid" id="usersStatsGrid">
+                            <!-- Будет заполнено JS -->
+                        </div>
+                        
+                        <!-- Поиск и фильтры -->
+                        <div class="users-controls">
+                            <input type="text" class="search-input" id="usersSearch" placeholder="Поиск по имени или email...">
+                            <select class="filter-select" id="usersFilter">
+                                <option value="all">Все пользователи</option>
+                                <option value="today">Зарегистрированы сегодня</option>
+                                <option value="week">Зарегистрированы на неделе</option>
+                                <option value="month">Зарегистрированы в месяце</option>
+                                <option value="online">Онлайн</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="refreshUsers()">
+                                🔄 Обновить
+                            </button>
+                        </div>
+
+                        <!-- Список пользователей -->
+                        <div class="users-grid" id="usersGrid">
+                            <!-- Будет заполнено JS -->
+                        </div>
+
+                        <!-- Пагинация -->
+                        <div class="pagination" id="usersPagination">
+                            <!-- Будет заполнено JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manga List Section -->
+                <div id="manga-list-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Список тайтлов</h2>
+                        <button class="btn btn-primary" onclick="showSection('add-manga')">
+                            ➕ Добавить тайтл
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="manga-list" id="mangaList">
+                            <!-- Список тайтлов будет сгенерирован JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Manga Section - ПОЛНАЯ ВЕРСИЯ ИЗ ПЕРВОГО КОДА -->
+                <div id="add-manga-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title" id="formTitle">Добавить новый тайтл</h2>
+                        <button class="btn btn-secondary" onclick="resetForm()">
+                            🔄 Очистить форму
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <form id="mangaForm">
+                            <!-- Основная информация -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Название тайтла *</label>
+                                    <input type="text" class="form-input" id="mangaTitle" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Тип *</label>
+                                    <select class="form-select" id="mangaType" required>
+                                        <option value="">Выберите тип</option>
+                                        <option value="Манга">Манга</option>
+                                        <option value="Манхва">Манхва</option>
+                                        <option value="Маньхуа">Маньхуа</option>
+                                        <option value="Аниме">Аниме</option>
+                                        <option value="Западный комикс">Западный комикс</option>
+                                        <option value="Веб-комикс">Веб-комикс</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Статус *</label>
+                                    <select class="form-select" id="mangaStatus" required>
+                                        <option value="">Выберите статус</option>
+                                        <option value="Анонс">Анонс</option>
+                                        <option value="Выходит">Выходит</option>
+                                        <option value="Продолжается">Продолжается</option>
+                                        <option value="Завершён">Завершён</option>
+                                        <option value="Заморожен">Заморожен</option>
+                                        <option value="Лицензировано">Лицензировано</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Год выпуска</label>
+                                    <input type="number" class="form-input" id="mangaYear" min="1900" max="2030">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Рейтинг (1-10)</label>
+                                    <input type="number" class="form-input" id="mangaRating" min="1" max="10" step="0.1">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Цель доната (₽)</label>
+                                    <input type="number" class="form-input" id="donationGoal" min="1000" value="10000">
+                                </div>
+                            </div>
+
+                            <!-- Количество глав -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Доступно глав</label>
+                                    <input type="number" class="form-input" id="availableChapters" min="0" placeholder="Сколько глав доступно (например: 5)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Всего глав</label>
+                                    <input type="number" class="form-input" id="totalChapters" min="1" placeholder="Общее количество глав (например: 99)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Предпросмотр</label>
+                                    <div style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); font-weight: 600;" id="chaptersPreview">
+                                        Главы: 0/0
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">URL обложки</label>
+                                <input type="url" class="form-input" id="mangaImage" placeholder="https://example.com/image.jpg" onchange="previewImage(this.value)">
+                                <div class="image-preview" id="imagePreview"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Описание</label>
+                                <textarea class="form-textarea" id="mangaDescription" rows="4"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Жанры</label>
+                                <input type="text" class="form-input" id="genreInput" placeholder="Введите жанр и нажмите Enter">
+                                <div class="tags-container" id="genreTags"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Категории</label>
+                                <input type="text" class="form-input" id="categoryInput" placeholder="Введите категорию и нажмите Enter">
+                                <div class="tags-container" id="categoryTags"></div>
+                            </div>
+
+                            <!-- Episodes Manager -->
+                            <div class="episodes-manager">
+                                <div class="episodes-header">
+                                    <h3 class="episodes-title">
+                                        <span>📺</span>
+                                        Управление сериями
+                                    </h3>
+                                    <button type="button" class="add-episode-btn" onclick="addNewEpisode()">
+                                        <span>➕</span>
+                                        Добавить серию
+                                    </button>
+                                </div>
+
+                                <div class="auto-number-controls">
+                                    <button type="button" class="auto-number-btn" onclick="sortEpisodes()">
+                                        📊 Сортировать
+                                    </button>
+                                    <span style="font-size: 0.875rem; color: var(--secondary-color);">
+                                        Используйте диапазоны глав, например: от 1 до 9, от 10 до 20
+                                    </span>
+                                </div>
+
+                                <div class="episodes-list" id="episodesList">
+                                    <div class="episodes-empty">
+                                        <h4>Нет добавленных серий</h4>
+                                        <p>Нажмите кнопку "Добавить серию" для создания первой серии</p>
+                                    </div>
+                                </div>
+
+                                <div class="episodes-summary" id="episodesSummary">
+                                    <strong>Итого:</strong> 0 серий, 0 с видео, 0 готовых к публикации
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button type="submit" class="btn btn-success">
+                                    💾 Сохранить тайтл
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                    🔄 Очистить форму
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="previewManga()">
+                                    👁️ Предпросмотр
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Donations Section - ПОЛНАЯ ВЕРСИЯ ИЗ ПЕРВОГО КОДА -->
+                <div id="donations-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">💰 Управление донатами</h2>
+                        <button class="btn btn-donation" onclick="showAddDonationForm()">
+                            ➕ Создать проект
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <!-- Add Donation Form -->
+                        <div id="donationFormContainer" style="display: none;">
+                            <form id="donationForm" style="margin-bottom: 30px; padding: 20px; background: var(--bg-color); border-radius: 12px; border: 2px solid var(--donation-color);">
+                                <h3 style="margin-bottom: 20px; color: var(--donation-color); display: flex; align-items: center; gap: 8px;" id="donationFormTitle">
+                                    <span>🎯</span>
+                                    Создать донат-проект
+                                </h3>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Выберите тайтл *</label>
+                                        <select class="form-select" id="donationMangaSelect" required>
+                                            <option value="">Выберите тайтл</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Название проекта</label>
+                                        <input type="text" class="form-input" id="donationProjectTitle" placeholder="Оставьте пустым для использования названия тайтла">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Цель доната (₽) *</label>
+                                        <input type="number" class="form-input" id="donationProjectGoal" min="1000" value="10000" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Текущая сумма (₽)</label>
+                                        <input type="number" class="form-input" id="donationCurrentAmount" min="0" value="0">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Статус проекта</label>
+                                        <select class="form-select" id="donationProjectStatus">
+                                            <option value="active">Активен</option>
+                                            <option value="completed">Завершен</option>
+                                            <option value="paused">Приостановлен</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Приоритет (1-10)</label>
+                                        <input type="number" class="form-input" id="donationPriority" min="1" max="10" value="5">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">URL изображения проекта</label>
+                                    <input type="url" class="form-input" id="donationProjectImage" placeholder="https://example.com/project-image.jpg" onchange="previewDonationImage(this.value)">
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="useDefaultImage" checked>
+                                        <label for="useDefaultImage">Использовать обложку тайтла</label>
+                                    </div>
+                                    <div class="image-preview" id="donationImagePreview"></div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Описание цели доната</label>
+                                    <textarea class="form-textarea" id="donationDescription" rows="3" placeholder="Например: Поддержите перевод следующих глав или озвучку серий"></textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <button type="submit" class="btn btn-donation">
+                                        💾 Сохранить проект
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" onclick="hideDonationForm()">
+                                        ❌ Отмена
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="resetDonationForm()">
+                                        🔄 Очистить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Donation Projects List -->
+                        <div id="donationProjectsList">
+                            <!-- Будет заполнено JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal для деталей пользователя -->
+    <div class="modal-overlay" id="userDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Детали пользователя</h2>
+                <button class="modal-close" onclick="closeUserModal()">×</button>
+            </div>
+            <div id="userDetailContent">
+                <!-- Будет заполнено JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // State - ОБЪЕДИНЕННОЕ ИЗ ОБЕИХ ВЕРСИЙ
+        let currentUsersPage = 1;
+        let usersPerPage = 12;
+        let filteredUsers = [];
+        let searchQuery = '';
+        let filterType = 'all';
+        let isAuthenticated = false;
+
+        // Manga management state
+        let episodes = [];
+        let episodeIdCounter = 1;
+        let editingManga = null;
+        let editingDonation = null;
+        let donationProjects = [];
+        let donationIdCounter = 1;
+
+        // Mock AuthSystem if not available
+        let AuthSystemReady = false;
+
+        // Load donation projects from localStorage
+        function loadDonationProjects() {
+            const saved = localStorage.getItem('lightfox_donation_projects');
+            if (saved) {
+                try {
+                    donationProjects = JSON.parse(saved);
+                    donationIdCounter = Math.max(...donationProjects.map(p => p.id || 0), 0) + 1;
+                } catch (e) {
+                    console.error('Error loading donation projects:', e);
+                    donationProjects = [];
+                }
+            }
+        }
+
+        // Save donation projects to localStorage
+        function saveDonationProjects() {
+            try {
+                localStorage.setItem('lightfox_donation_projects', JSON.stringify(donationProjects));
+            } catch (e) {
+                console.error('Error saving donation projects:', e);
+            }
+        }
+
+        // Status color mapping function
+        function getStatusClass(status) {
+            const statusMap = {
+                'Завершён': 'completed',
+                'Завершен': 'completed',
+                'Выходит': 'ongoing',
+                'Продолжается': 'ongoing',
+                'Заморожен': 'paused',
+                'Анонс': 'announced',
+                'Лицензировано': 'licensed',
+                'Лицензия': 'licensed',
+                'active': 'active',
+                'completed': 'completed',
+                'paused': 'paused'
+            };
+            return statusMap[status] || '';
+        }
+
+        // Check for AuthSystem availability
+        function waitForAuthSystem() {
+            return new Promise((resolve) => {
+                if (window.AuthSystem) {
+                    AuthSystemReady = true;
+                    resolve();
+                    return;
+                }
+
+                // Listen for AuthSystem ready event
+                window.addEventListener('authSystemReady', () => {
+                    AuthSystemReady = true;
+                    resolve();
+                });
+
+                // Timeout fallback
+                setTimeout(() => {
+                    if (!window.AuthSystem) {
+                        console.warn('AuthSystem не загружена, создаем mock');
+                        createMockAuthSystem();
+                        AuthSystemReady = true;
+                    }
+                    resolve();
+                }, 2000);
+            });
+        }
+
+        // Create mock AuthSystem
+        function createMockAuthSystem() {
+            window.AuthSystem = {
+                getUserStats: () => ({
+                    total: 1245,
+                    online: 89,
+                    today: 23,
+                    thisWeek: 156,
+                    thisMonth: 412,
+                    devices: 2890
+                }),
+                getAllUsers: (page = 1, limit = 50) => {
+                    const mockUsers = generateMockUsers();
+                    const start = (page - 1) * limit;
+                    const end = start + limit;
+                    
+                    return {
+                        users: mockUsers.slice(start, end),
+                        total: mockUsers.length,
+                        page: page,
+                        limit: limit,
+                        hasMore: end < mockUsers.length
+                    };
+                }
+            };
+        }
+
+        // Generate mock users data
+        function generateMockUsers() {
+            const names = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Максим', 'Елена', 'Сергей', 'Ольга', 'Андрей', 'Наталья'];
+            const domains = ['gmail.com', 'yandex.ru', 'mail.ru', 'outlook.com'];
+            const devices = [
+                { type: 'Desktop', browser: 'Chrome' },
+                { type: 'Mobile', browser: 'Safari' },
+                { type: 'Tablet', browser: 'Firefox' },
+                { type: 'Desktop', browser: 'Edge' }
+            ];
+
+            const users = [];
+            for (let i = 1; i <= 50; i++) {
+                const name = names[Math.floor(Math.random() * names.length)];
+                const email = `${name.toLowerCase()}${i}@${domains[Math.floor(Math.random() * domains.length)]}`;
+                const registeredDaysAgo = Math.floor(Math.random() * 365);
+                const registeredAt = new Date(Date.now() - registeredDaysAgo * 24 * 60 * 60 * 1000);
+                const lastLoginMinsAgo = Math.floor(Math.random() * 1440); // Last 24 hours
+                const lastLogin = new Date(Date.now() - lastLoginMinsAgo * 60 * 1000);
+
+                const userDevices = [];
+                const deviceCount = Math.floor(Math.random() * 3) + 1;
+                for (let j = 0; j < deviceCount; j++) {
+                    const device = devices[Math.floor(Math.random() * devices.length)];
+                    userDevices.push({
+                        id: `device_${i}_${j}`,
+                        type: device.type,
+                        browser: device.browser,
+                        addedAt: registeredAt.toISOString(),
+                        lastLogin: new Date(Date.now() - Math.random() * 60 * 60 * 1000).toISOString()
+                    });
+                }
+
+                users.push({
+                    id: `user_${i}`,
+                    username: name,
+                    email: email,
+                    registeredAt: registeredAt.toISOString(),
+                    lastLogin: lastLogin.toISOString(),
+                    devices: userDevices,
+                    subscription: Math.random() > 0.7 ? 'Premium' : null,
+                    favorites: Array.from({length: Math.floor(Math.random() * 20)}, (_, k) => `manga_${k}`),
+                    watching: Array.from({length: Math.floor(Math.random() * 10)}, (_, k) => `manga_${k}`),
+                    completed: Array.from({length: Math.floor(Math.random() * 15)}, (_, k) => `manga_${k}`),
+                    donationHistory: Array.from({length: Math.floor(Math.random() * 5)}, (_, k) => ({
+                        amount: Math.floor(Math.random() * 5000) + 500,
+                        date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+                    }))
+                });
+            }
+            return users;
+        }
+
+        // Authentication
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            
+            if (password === 'admin123') {
+                isAuthenticated = true;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                initializeAdmin();
+            } else {
+                showNotification('Неверный пароль!', 'error');
+            }
+        });
+
+        // Initialize admin panel - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        async function initializeAdmin() {
+            try {
+                await Promise.all([
+                    waitForAuthSystem(),
+                    loadDataSystem()
+                ]);
+                
+                loadDonationProjects();
+                loadDashboard();
+                loadUsersSection();
+                loadMangaList();
+                loadDonationProjectsList();
+                setupEventListeners();
+                console.log('🔥 Админка с управлением пользователями и тайтлов загружена!');
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                showNotification('Ошибка загрузки системы', 'error');
+            }
+        }
+
+        // Load data system - ИСПРАВЛЕНО
+        function loadDataSystem() {
+            return new Promise((resolve, reject) => {
+                if (window.MangaAPI) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'js/data.js';
+                script.onload = () => {
+                    const checkAPI = () => {
+                        if (window.MangaAPI) {
+                            resolve();
+                        } else {
+                            setTimeout(checkAPI, 100);
+                        }
+                    };
+                    checkAPI();
+                };
+                script.onerror = () => {
+                    console.warn('Не удалось загрузить MangaAPI, создаем mock');
+                    createMockMangaAPI();
+                    resolve();
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Create mock MangaAPI if not available
+        function createMockMangaAPI() {
+            window.MangaAPI = {
+                getAllManga: () => [],
+                getMangaById: (id) => null,
+                addManga: (data) => ({ id: 'mock_' + Date.now(), ...data }),
+                updateManga: (id, data) => ({ id, ...data }),
+                deleteManga: (id) => true,
+                getStats: () => ({
+                    totalManga: 0,
+                    totalEpisodes: 0,
+                    averageRating: 0
+                })
+            };
+        }
+
+        // Setup event listeners - РАСШИРЕННАЯ ВЕРСИЯ
+        function setupEventListeners() {
+            // Manga form submission
+            const mangaForm = document.getElementById('mangaForm');
+            if (mangaForm) {
+                mangaForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    saveManga();
+                });
+            }
+
+            // Donation form submission
+            const donationForm = document.getElementById('donationForm');
+            if (donationForm) {
+                donationForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    saveDonationProject();
+                });
+            }
+
+            // Genre input
+            const genreInput = document.getElementById('genreInput');
+            if (genreInput) {
+                genreInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTag('genre', this.value.trim());
+                        this.value = '';
+                    }
+                });
+            }
+
+            // Category input
+            const categoryInput = document.getElementById('categoryInput');
+            if (categoryInput) {
+                categoryInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTag('category', this.value.trim());
+                        this.value = '';
+                    }
+                });
+            }
+
+            // Chapters preview update
+            const availableChapters = document.getElementById('availableChapters');
+            const totalChapters = document.getElementById('totalChapters');
+            if (availableChapters && totalChapters) {
+                availableChapters.addEventListener('input', updateChaptersPreview);
+                totalChapters.addEventListener('input', updateChaptersPreview);
+            }
+
+            // Use default image checkbox
+            const useDefaultImage = document.getElementById('useDefaultImage');
+            if (useDefaultImage) {
+                useDefaultImage.addEventListener('change', function() {
+                    if (this.checked) {
+                        document.getElementById('donationProjectImage').value = '';
+                        document.getElementById('donationImagePreview').innerHTML = '';
+                    }
+                });
+            }
+
+            // Поиск пользователей
+            const searchInput = document.getElementById('usersSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(searchUsers, 300));
+            }
+
+            // Фильтр пользователей
+            const filterSelect = document.getElementById('usersFilter');
+            if (filterSelect) {
+                filterSelect.addEventListener('change', filterUsers);
+            }
+
+            // Закрытие модального окна по клику на overlay
+            const modalOverlay = document.getElementById('userDetailModal');
+            if (modalOverlay) {
+                modalOverlay.addEventListener('click', (e) => {
+                    if (e.target === modalOverlay) {
+                        closeUserModal();
+                    }
+                });
+            }
+
+            // Закрытие модального окна по Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeUserModal();
+                }
+            });
+        }
+
+        // Section navigation
+        function showSection(sectionName) {
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.add('active');
+
+            // Load section data
+            if (sectionName === 'dashboard') {
+                loadDashboard();
+            } else if (sectionName === 'users') {
+                loadUsersSection();
+            } else if (sectionName === 'manga-list') {
+                loadMangaList();
+            } else if (sectionName === 'add-manga') {
+                loadMangaSelectOptions();
+            } else if (sectionName === 'donations') {
+                loadDonationProjectsList();
+                loadMangaSelectOptions();
+            }
+        }
+
+        // Dashboard functions - ОБНОВЛЕННАЯ ВЕРСИЯ
+        function loadDashboard() {
+            const userStats = AuthSystemReady ? window.AuthSystem.getUserStats() : {
+                total: 0, online: 0, today: 0, thisWeek: 0, thisMonth: 0, devices: 0
+            };
+            
+            const mangaStats = window.MangaAPI ? window.MangaAPI.getStats() : {
+                totalManga: 0, totalEpisodes: 0, averageRating: 0
+            };
+            
+            // Add donation stats
+            const totalDonationGoal = donationProjects.reduce((sum, project) => sum + (project.goal || 0), 0);
+            const totalDonationCurrent = donationProjects.reduce((sum, project) => sum + (project.currentAmount || 0), 0);
+            
+            document.getElementById('dashboardStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.total}</div>
+                    <div class="stat-label">Всего пользователей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.online}</div>
+                    <div class="stat-label">Онлайн сейчас</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${mangaStats.totalManga}</div>
+                    <div class="stat-label">Всего тайтлов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${mangaStats.totalEpisodes}</div>
+                    <div class="stat-label">Всего серий</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${donationProjects.length}</div>
+                    <div class="stat-label">Донат-проектов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${totalDonationCurrent.toLocaleString()}₽</div>
+                    <div class="stat-label">Собрано донатов</div>
+                </div>
+            `;
+        }
+
+        // Users management functions
+        function loadUsersSection() {
+            if (!AuthSystemReady) return;
+            
+            loadUsersStats();
+            loadUsersList();
+        }
+
+        function loadUsersStats() {
+            const stats = window.AuthSystem.getUserStats();
+            
+            document.getElementById('usersStatsGrid').innerHTML = `
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">👥</div>
+                    <div class="users-stat-number">${stats.total}</div>
+                    <div class="users-stat-label">Всего пользователей</div>
+                </div>
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">🟢</div>
+                    <div class="users-stat-number">${stats.online}</div>
+                    <div class="users-stat-label">Онлайн сейчас</div>
+                </div>
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">📅</div>
+                    <div class="users-stat-number">${stats.today}</div>
+                    <div class="users-stat-label">Сегодня</div>
+                </div>
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">📱</div>
+                    <div class="users-stat-number">${stats.devices}</div>
+                    <div class="users-stat-label">Всего устройств</div>
+                </div>
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">📊</div>
+                    <div class="users-stat-number">${stats.thisWeek}</div>
+                    <div class="users-stat-label">За неделю</div>
+                </div>
+                <div class="users-stat-card">
+                    <div class="users-stat-icon">📈</div>
+                    <div class="users-stat-number">${stats.thisMonth}</div>
+                    <div class="users-stat-label">За месяц</div>
+                </div>
+            `;
+        }
+
+        function loadUsersList() {
+            const result = window.AuthSystem.getAllUsers(currentUsersPage, usersPerPage);
+            let users = result.users;
+
+            // Apply filters
+            users = applyUsersFilter(users);
+            filteredUsers = users;
+
+            // Display users
+            displayUsers(users);
+            displayUsersPagination(result);
+        }
+
+        function applyUsersFilter(users) {
+            let filtered = [...users];
+
+            // Search filter
+            if (searchQuery) {
+                filtered = filtered.filter(user => 
+                    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            }
+
+            // Date filter
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            switch (filterType) {
+                case 'today':
+                    filtered = filtered.filter(user => new Date(user.registeredAt) >= today);
+                    break;
+                case 'week':
+                    filtered = filtered.filter(user => new Date(user.registeredAt) >= thisWeek);
+                    break;
+                case 'month':
+                    filtered = filtered.filter(user => new Date(user.registeredAt) >= thisMonth);
+                    break;
+                case 'online':
+                    filtered = filtered.filter(user => {
+                        const lastLogin = new Date(user.lastLogin);
+                        return now - lastLogin < 5 * 60 * 1000; // 5 minutes
+                    });
+                    break;
+            }
+
+            return filtered;
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('usersGrid');
+            
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <h3>👥 Пользователи не найдены</h3>
+                        <p>Попробуйте изменить параметры поиска или фильтры</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = users.map(user => renderUserCard(user)).join('');
+        }
+
+        function renderUserCard(user) {
+            const isOnline = (new Date() - new Date(user.lastLogin)) < 5 * 60 * 1000;
+            const registeredDate = new Date(user.registeredAt).toLocaleDateString('ru-RU');
+            const devicesCount = user.devices ? user.devices.length : 0;
+            
+            return `
+                <div class="user-card">
+                    <div class="user-header">
+                        <div class="user-avatar">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="user-info">
+                            <h3>${user.username}</h3>
+                            <p>${user.email}</p>
+                        </div>
+                    </div>
+
+                    <div class="user-stats">
+                        <div class="user-stat">
+                            <div class="user-stat-number">${devicesCount}</div>
+                            <div class="user-stat-label">Устройств</div>
+                        </div>
+                        <div class="user-stat">
+                            <div class="user-stat-number ${isOnline ? 'online' : 'offline'}" style="color: ${isOnline ? '#10b981' : '#6b7280'}">
+                                ${isOnline ? 'ON' : 'OFF'}
+                            </div>
+                            <div class="user-stat-label">Статус</div>
+                        </div>
+                    </div>
+
+                    <div class="user-devices">
+                        <h4>📱 Устройства:</h4>
+                        <div class="device-list">
+                            ${(user.devices || []).slice(0, 2).map(device => `
+                                <div class="device-item">
+                                    <div class="device-info">
+                                        <span class="device-icon">${getDeviceIcon(device.type)}</span>
+                                        <span>${device.type || 'Unknown'} - ${device.browser || 'Unknown'}</span>
+                                    </div>
+                                    <span class="device-status ${isDeviceOnline(device) ? 'online' : 'offline'}">
+                                        ${isDeviceOnline(device) ? 'ON' : 'OFF'}
+                                    </span>
+                                </div>
+                            `).join('')}
+                            ${user.devices && user.devices.length > 2 ? `
+                                <div class="device-item">
+                                    <span style="color: var(--secondary-color);">
+                                        +${user.devices.length - 2} ещё
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.8rem; color: var(--secondary-color); margin-bottom: 15px;">
+                        Регистрация: ${registeredDate}
+                    </div>
+
+                    <div class="user-actions">
+                        <button class="user-action-btn" onclick="viewUserDetails('${user.id}')">
+                            👁️ Детали
+                        </button>
+                        <button class="user-action-btn danger" onclick="confirmUserAction('${user.id}', '${user.username}')">
+                            🗑️ Удалить
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getDeviceIcon(deviceType) {
+            switch (deviceType) {
+                case 'Mobile': return '📱';
+                case 'Tablet': return '📱';
+                case 'Desktop': return '💻';
+                default: return '📱';
+            }
+        }
+
+        function isDeviceOnline(device) {
+            const lastLogin = new Date(device.lastLogin);
+            const now = new Date();
+            return (now - lastLogin) < 5 * 60 * 1000; // 5 minutes
+        }
+
+        function viewUserDetails(userId) {
+            const result = window.AuthSystem.getAllUsers();
+            const user = result.users.find(u => u.id === userId);
+            
+            if (!user) return;
+
+            const content = `
+                <div class="user-detail-section">
+                    <h3>👤 Основная информация</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">ID пользователя</div>
+                            <div class="detail-value">${user.id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Имя пользователя</div>
+                            <div class="detail-value">${user.username}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Email</div>
+                            <div class="detail-value">${user.email}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Дата регистрации</div>
+                            <div class="detail-value">${new Date(user.registeredAt).toLocaleString('ru-RU')}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Последний вход</div>
+                            <div class="detail-value">${new Date(user.lastLogin).toLocaleString('ru-RU')}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Подписка</div>
+                            <div class="detail-value">${user.subscription || 'Отсутствует'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-detail-section">
+                    <h3>📱 Устройства (${user.devices ? user.devices.length : 0}/3)</h3>
+                    <div class="device-list">
+                        ${(user.devices || []).map(device => `
+                            <div class="device-item" style="margin-bottom: 10px; padding: 15px;">
+                                <div class="device-info">
+                                    <span class="device-icon" style="font-size: 1.2rem;">${getDeviceIcon(device.type)}</span>
+                                    <div style="margin-left: 10px;">
+                                        <div style="font-weight: 600;">${device.type} - ${device.browser}</div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary-color);">
+                                            Добавлено: ${new Date(device.addedAt).toLocaleString('ru-RU')}
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary-color);">
+                                            Последний вход: ${new Date(device.lastLogin).toLocaleString('ru-RU')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="device-status ${isDeviceOnline(device) ? 'online' : 'offline'}">
+                                    ${isDeviceOnline(device) ? 'Онлайн' : 'Оффлайн'}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="user-detail-section">
+                    <h3>📊 Активность</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Избранное</div>
+                            <div class="detail-value">${user.favorites ? user.favorites.length : 0} тайтлов</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Смотрю</div>
+                            <div class="detail-value">${user.watching ? user.watching.length : 0} тайтлов</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Завершено</div>
+                            <div class="detail-value">${user.completed ? user.completed.length : 0} тайтлов</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Донаты</div>
+                            <div class="detail-value">${user.donationHistory ? user.donationHistory.length : 0} транзакций</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('userDetailContent').innerHTML = content;
+            document.getElementById('userDetailModal').classList.add('show');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userDetailModal').classList.remove('show');
+        }
+
+        function confirmUserAction(userId, username) {
+            if (confirm(`Вы уверены, что хотите удалить пользователя "${username}"?\n\nЭто действие нельзя отменить!`)) {
+                deleteUser(userId);
+            }
+        }
+
+        function deleteUser(userId) {
+            // In a real app, this would make an API call
+            showNotification('Функция удаления пользователя недоступна в демо-версии', 'warning');
+        }
+
+        function displayUsersPagination(result) {
+            const container = document.getElementById('usersPagination');
+            
+            if (result.total <= result.limit) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(result.total / result.limit);
+            let html = '';
+
+            // Previous button
+            html += `
+                <button class="pagination-btn" ${currentUsersPage === 1 ? 'disabled' : ''} 
+                        onclick="changeUsersPage(${currentUsersPage - 1})">
+                    ← Предыдущая
+                </button>
+            `;
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentUsersPage - 2 && i <= currentUsersPage + 2)) {
+                    html += `
+                        <button class="pagination-btn ${i === currentUsersPage ? 'active' : ''}" 
+                                onclick="changeUsersPage(${i})">
+                            ${i}
+                        </button>
+                    `;
+                } else if (i === currentUsersPage - 3 || i === currentUsersPage + 3) {
+                    html += '<span class="pagination-btn" style="border: none; cursor: default;">...</span>';
+                }
+            }
+
+            // Next button
+            html += `
+                <button class="pagination-btn" ${currentUsersPage === totalPages ? 'disabled' : ''} 
+                        onclick="changeUsersPage(${currentUsersPage + 1})">
+                    Следующая →
+                </button>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function changeUsersPage(page) {
+            if (page < 1) return;
+            currentUsersPage = page;
+            loadUsersList();
+        }
+
+        function searchUsers() {
+            searchQuery = document.getElementById('usersSearch').value.trim();
+            currentUsersPage = 1;
+            loadUsersList();
+        }
+
+        function filterUsers() {
+            filterType = document.getElementById('usersFilter').value;
+            currentUsersPage = 1;
+            loadUsersList();
+        }
+
+        function refreshUsers() {
+            loadUsersStats();
+            loadUsersList();
+            showNotification('Список пользователей обновлен', 'success');
+        }
+
+        // Manga management functions - ИЗ ПЕРВОГО КОДА
+        function loadMangaList() {
+            if (!window.MangaAPI) return;
+
+            const allManga = window.MangaAPI.getAllManga();
+            const container = document.getElementById('mangaList');
+
+            if (allManga.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <h3>Нет тайтлов</h3>
+                        <p>Добавьте первый тайтл через форму</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allManga.map(manga => `
+                <div class="manga-item">
+                    <div class="manga-item-header">
+                        <div class="manga-item-title">${manga.title}</div>
+                        <div class="manga-item-meta">
+                            ${manga.type} • <span class="status-badge ${getStatusClass(manga.status)}">${manga.status}</span> • Главы: ${manga.availableEpisodes || 0}/${manga.totalEpisodes || 0}
+                        </div>
+                    </div>
+                    <div class="manga-item-actions">
+                        <button class="btn btn-primary" onclick="editManga('${manga.id}')">✏️ Редактировать</button>
+                        <button class="btn btn-danger" onclick="deleteManga('${manga.id}')">🗑️ Удалить</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ДОБАВЛЯЕМ ВСЕ НЕДОСТАЮЩИЕ ФУНКЦИИ ИЗ ПЕРВОГО КОДА
+
+        // Tag management
+        function addTag(type, value) {
+            if (!value) return;
+
+            const container = document.getElementById(type + 'Tags');
+            if (!container) return;
+
+            const existingTags = Array.from(container.querySelectorAll('.tag')).map(tag => 
+                tag.textContent.replace('×', '').trim()
+            );
+
+            if (existingTags.includes(value)) return;
+
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.innerHTML = `
+                ${value}
+                <button type="button" class="tag-remove" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(tag);
+        }
+
+        // Update chapters preview
+        function updateChaptersPreview() {
+            const available = parseInt(document.getElementById('availableChapters')?.value) || 0;
+            const total = parseInt(document.getElementById('totalChapters')?.value) || 0;
+            
+            const preview = document.getElementById('chaptersPreview');
+            if (!preview) return;
+
+            preview.textContent = `Главы: ${available}/${total}`;
+            
+            // Add color coding
+            preview.style.color = '';
+            
+            if (available > total && total > 0) {
+                preview.style.color = 'var(--danger-color)';
+                preview.textContent += ' ⚠️ Доступных больше чем всего!';
+            } else if (available === total && total > 0) {
+                preview.style.color = 'var(--success-color)';
+                preview.textContent += ' ✅ Завершено';
+            } else if (available > 0 && total > 0) {
+                preview.style.color = 'var(--warning-color)';
+                preview.textContent += ' 📖 В процессе';
+            }
+        }
+
+        function previewImage(url) {
+            const preview = document.getElementById('imagePreview');
+            if (!preview) return;
+            
+            if (!url) {
+                preview.innerHTML = '';
+                return;
+            }
+
+            preview.innerHTML = `
+                <img src="${url}" alt="Preview" class="preview-image" 
+                     onerror="this.parentElement.innerHTML='<p style=color:var(--danger-color)>Ошибка загрузки изображения</p>'">
+            `;
+        }
+
+        // === EPISODE MANAGEMENT ===
+        function addNewEpisode() {
+            const newEpisode = {
+                id: episodeIdCounter++,
+                title: `Серия ${episodes.length + 1}`,
+                url: '',
+                chapterFrom: episodes.length + 1,
+                chapterTo: episodes.length + 1,
+                order: episodes.length
+            };
+
+            episodes.push(newEpisode);
+            renderEpisodesList();
+            updateEpisodesSummary();
+            showNotification('Новая серия добавлена', 'success');
+        }
+
+        function renderEpisodesList() {
+            const container = document.getElementById('episodesList');
+            if (!container) return;
+
+            if (episodes.length === 0) {
+                container.innerHTML = `
+                    <div class="episodes-empty">
+                        <h4>Нет добавленных серий</h4>
+                        <p>Нажмите кнопку "Добавить серию" для создания первой серии</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedEpisodes = [...episodes].sort((a, b) => a.order - b.order);
+
+            container.innerHTML = sortedEpisodes.map(episode => `
+                <div class="episode-item" data-episode-id="${episode.id}">
+                    <div class="episode-header">
+                        <div class="chapter-range-inputs">
+                            <input type="number" 
+                                   class="chapter-input" 
+                                   value="${episode.chapterFrom}" 
+                                   min="1" 
+                                   placeholder="От"
+                                   title="Глава от"
+                                   onchange="updateEpisodeChapterFrom(${episode.id}, this.value)">
+                            <span>-</span>
+                            <input type="number" 
+                                   class="chapter-input" 
+                                   value="${episode.chapterTo}" 
+                                   min="1" 
+                                   placeholder="До"
+                                   title="Глава до"
+                                   onchange="updateEpisodeChapterTo(${episode.id}, this.value)">
+                        </div>
+                        
+                        <input type="text" 
+                               class="episode-title-input" 
+                               value="${episode.title}" 
+                               placeholder="Название серии"
+                               onchange="updateEpisodeTitle(${episode.id}, this.value)">
+                        
+                        <div class="episode-actions">
+                            <span class="episode-status ${episode.url ? 'ready' : 'empty'}">
+                                ${episode.url ? '✅ Готова' : '⏳ Пустая'}
+                            </span>
+                            <button type="button" class="remove-episode-btn" onclick="removeEpisode(${episode.id})">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <input type="url" 
+                           class="episode-url-input ${episode.url ? 'filled' : ''}" 
+                           value="${episode.url}" 
+                           placeholder="Ссылка на видео (YouTube, Google Drive, и т.д.)"
+                           onchange="updateEpisodeUrl(${episode.id}, this.value)">
+                </div>
+            `).join('');
+        }
+
+        function updateEpisodeChapterFrom(episodeId, newValue) {
+            const episode = episodes.find(e => e.id === episodeId);
+            if (episode) {
+                episode.chapterFrom = parseInt(newValue) || 1;
+                updateEpisodeTitle(episodeId, generateEpisodeTitle(episode));
+                updateEpisodesSummary();
+            }
+        }
+
+        function updateEpisodeChapterTo(episodeId, newValue) {
+            const episode = episodes.find(e => e.id === episodeId);
+            if (episode) {
+                episode.chapterTo = parseInt(newValue) || episode.chapterFrom;
+                updateEpisodeTitle(episodeId, generateEpisodeTitle(episode));
+                updateEpisodesSummary();
+            }
+        }
+
+        function generateEpisodeTitle(episode) {
+            if (episode.chapterFrom === episode.chapterTo) {
+                return `Глава ${episode.chapterFrom}`;
+            } else {
+                return `Главы ${episode.chapterFrom}-${episode.chapterTo}`;
+            }
+        }
+
+        function updateEpisodeTitle(episodeId, newTitle) {
+            const episode = episodes.find(e => e.id === episodeId);
+            if (episode) {
+                episode.title = newTitle.trim() || generateEpisodeTitle(episode);
+                
+                const titleInput = document.querySelector(`[data-episode-id="${episodeId}"] .episode-title-input`);
+                if (titleInput && titleInput.value !== episode.title) {
+                    titleInput.value = episode.title;
+                }
+                
+                updateEpisodesSummary();
+            }
+        }
+
+        function updateEpisodeUrl(episodeId, newUrl) {
+            const episode = episodes.find(e => e.id === episodeId);
+            if (episode) {
+                episode.url = newUrl.trim();
+                
+                const input = document.querySelector(`[data-episode-id="${episodeId}"] .episode-url-input`);
+                if (input) {
+                    input.classList.toggle('filled', !!episode.url);
+                }
+                
+                renderEpisodesList();
+                updateEpisodesSummary();
+            }
+        }
+
+        function removeEpisode(episodeId) {
+            const episodeIndex = episodes.findIndex(e => e.id === episodeId);
+            const episode = episodes[episodeIndex];
+            
+            if (confirm(`Удалить "${episode.title}"?`)) {
+                episodes.splice(episodeIndex, 1);
+                
+                episodes.forEach((ep, index) => {
+                    ep.order = index;
+                });
+                
+                renderEpisodesList();
+                updateEpisodesSummary();
+                showNotification('Серия удалена', 'warning');
+            }
+        }
+
+        function sortEpisodes() {
+            if (episodes.length === 0) {
+                showNotification('Нет серий для сортировки', 'warning');
+                return;
+            }
+
+            episodes.sort((a, b) => a.chapterFrom - b.chapterFrom);
+            episodes.forEach((episode, index) => {
+                episode.order = index;
+            });
+
+            renderEpisodesList();
+            updateEpisodesSummary();
+            showNotification('Серии отсортированы', 'success');
+        }
+
+        function updateEpisodesSummary() {
+            const total = episodes.length;
+            const withUrls = episodes.filter(ep => ep.url && ep.url.trim()).length;
+            const ready = withUrls;
+
+            const summary = document.getElementById('episodesSummary');
+            if (summary) {
+                summary.innerHTML = `
+                    <strong>Итого:</strong> ${total} серий, ${withUrls} с видео, ${ready} готовых к публикации
+                `;
+            }
+        }
+
+        // === MANGA SAVE FUNCTION ===
+        function saveManga() {
+            try {
+                const mangaData = {
+                    title: document.getElementById('mangaTitle').value.trim(),
+                    type: document.getElementById('mangaType').value,
+                    status: document.getElementById('mangaStatus').value,
+                    year: parseInt(document.getElementById('mangaYear').value) || new Date().getFullYear(),
+                    rating: parseFloat(document.getElementById('mangaRating').value) || 8.0,
+                    donationGoal: parseInt(document.getElementById('donationGoal').value) || 10000,
+                    image: document.getElementById('mangaImage').value.trim() || null,
+                    description: document.getElementById('mangaDescription').value.trim() || '',
+                    genres: Array.from(document.getElementById('genreTags').querySelectorAll('.tag')).map(tag => 
+                        tag.textContent.replace('×', '').trim()
+                    ),
+                    categories: Array.from(document.getElementById('categoryTags').querySelectorAll('.tag')).map(tag => 
+                        tag.textContent.replace('×', '').trim()
+                    )
+                };
+
+                if (!mangaData.title) {
+                    throw new Error('Название тайтла обязательно');
+                }
+                if (!mangaData.type) {
+                    throw new Error('Тип тайтла обязателен');
+                }
+                if (!mangaData.status) {
+                    throw new Error('Статус тайтла обязателен');
+                }
+
+                const availableChapters = parseInt(document.getElementById('availableChapters').value) || 0;
+                const totalChapters = parseInt(document.getElementById('totalChapters').value) || 0;
+                
+                mangaData.availableChapters = availableChapters;
+                mangaData.totalChapters = totalChapters;
+
+                mangaData.episodes = {};
+                const readyEpisodes = episodes.filter(ep => ep.url && ep.url.trim());
+                readyEpisodes.forEach(episode => {
+                    let episodeKey;
+                    if (episode.chapterFrom === episode.chapterTo) {
+                        episodeKey = episode.chapterFrom.toString();
+                    } else {
+                        episodeKey = `${episode.chapterFrom}-${episode.chapterTo}`;
+                    }
+                    mangaData.episodes[episodeKey] = episode.url;
+                });
+
+                mangaData.totalEpisodes = Object.keys(mangaData.episodes).length;
+                mangaData.availableEpisodes = Object.keys(mangaData.episodes).length;
+
+                saveToAPI(mangaData);
+
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        function saveToAPI(mangaData) {
+            try {
+                let result;
+                if (editingManga) {
+                    result = window.MangaAPI.updateManga(editingManga.id, mangaData);
+                    showNotification('Тайтл успешно обновлен!', 'success');
+                } else {
+                    result = window.MangaAPI.addManga(mangaData);
+                    showNotification('Тайтл успешно добавлен!', 'success');
+                }
+
+                if (result) {
+                    loadDashboard();
+                    loadMangaList();
+                    loadDonationProjectsList();
+                    
+                    setTimeout(() => {
+                        resetForm();
+                        showSection('manga-list');
+                    }, 1500);
+                }
+
+            } catch (error) {
+                console.error('Ошибка API:', error);
+                showNotification('Ошибка сохранения в базу данных', 'error');
+            }
+        }
+
+        function editManga(id) {
+            const manga = window.MangaAPI.getMangaById(id);
+            if (!manga) return;
+
+            editingManga = manga;
+            showSection('add-manga');
+            
+            // Fill form
+            document.getElementById('mangaTitle').value = manga.title || '';
+            document.getElementById('mangaType').value = manga.type || '';
+            document.getElementById('mangaStatus').value = manga.status || '';
+            document.getElementById('mangaYear').value = manga.year || '';
+            document.getElementById('mangaRating').value = manga.rating || '';
+            document.getElementById('donationGoal').value = manga.donationGoal || 10000;
+            document.getElementById('mangaImage').value = manga.image || '';
+            document.getElementById('mangaDescription').value = manga.description || '';
+
+            document.getElementById('availableChapters').value = manga.availableChapters || 0;
+            document.getElementById('totalChapters').value = manga.totalChapters || 0;
+            updateChaptersPreview();
+
+            // Load genres and categories
+            const genreTags = document.getElementById('genreTags');
+            const categoryTags = document.getElementById('categoryTags');
+            if (genreTags) genreTags.innerHTML = '';
+            if (categoryTags) categoryTags.innerHTML = '';
+            
+            if (manga.genres) {
+                manga.genres.forEach(genre => addTag('genre', genre));
+            }
+            if (manga.categories) {
+                manga.categories.forEach(category => addTag('category', category));
+            }
+
+            // Load episodes
+            episodes = [];
+            episodeIdCounter = 1;
+            if (manga.episodes) {
+                Object.keys(manga.episodes).forEach(episodeKey => {
+                    const episode = {
+                        id: episodeIdCounter++,
+                        title: `Серия ${episodeKey}`,
+                        url: manga.episodes[episodeKey],
+                        chapterFrom: episodeKey.includes('-') ? parseInt(episodeKey.split('-')[0]) : parseInt(episodeKey),
+                        chapterTo: episodeKey.includes('-') ? parseInt(episodeKey.split('-')[1]) : parseInt(episodeKey),
+                        order: episodes.length
+                    };
+                    episodes.push(episode);
+                });
+            }
+
+            renderEpisodesList();
+            updateEpisodesSummary();
+            
+            document.getElementById('formTitle').textContent = 'Редактировать тайтл';
+            
+            if (manga.image) {
+                previewImage(manga.image);
+            }
+        }
+
+        function deleteManga(id) {
+            const manga = window.MangaAPI.getMangaById(id);
+            if (!manga) return;
+
+            if (confirm(`Удалить тайтл "${manga.title}"? Это действие нельзя отменить.`)) {
+                window.MangaAPI.deleteManga(id);
+                
+                donationProjects = donationProjects.filter(p => p.mangaId !== id);
+                saveDonationProjects();
+                
+                loadMangaList();
+                loadDashboard();
+                loadDonationProjectsList();
+                showNotification('Тайтл и связанные проекты удалены', 'success');
+            }
+        }
+
+        function resetForm() {
+            const form = document.getElementById('mangaForm');
+            if (form) form.reset();
+            
+            ['genreTags', 'categoryTags', 'imagePreview'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = '';
+            });
+            
+            episodes = [];
+            episodeIdCounter = 1;
+            renderEpisodesList();
+            updateEpisodesSummary();
+            updateChaptersPreview();
+            
+            editingManga = null;
+            document.getElementById('formTitle').textContent = 'Добавить новый тайтл';
+            
+            showNotification('Форма очищена', 'success');
+        }
+
+        function previewManga() {
+            const title = document.getElementById('mangaTitle').value.trim();
+            if (!title) {
+                showNotification('Введите название тайтла для предпросмотра', 'warning');
+                return;
+            }
+
+            if (episodes.length === 0) {
+                showNotification('Добавьте хотя бы одну серию для предпросмотра', 'warning');
+                return;
+            }
+
+            showNotification('Предпросмотр будет доступен после сохранения тайтла', 'warning');
+        }
+
+        // === DONATION FUNCTIONS ===
+        function loadMangaSelectOptions() {
+            if (!window.MangaAPI) return;
+
+            const allManga = window.MangaAPI.getAllManga();
+            const select = document.getElementById('donationMangaSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Выберите тайтл</option>';
+            allManga.forEach(manga => {
+                select.innerHTML += `<option value="${manga.id}">${manga.title}</option>`;
+            });
+        }
+
+        function showAddDonationForm() {
+            const container = document.getElementById('donationFormContainer');
+            if (container) {
+                container.style.display = 'block';
+                document.getElementById('donationFormTitle').innerHTML = '<span>🎯</span> Создать донат-проект';
+                editingDonation = null;
+                resetDonationForm();
+                loadMangaSelectOptions();
+            }
+        }
+
+        function hideDonationForm() {
+            const container = document.getElementById('donationFormContainer');
+            if (container) {
+                container.style.display = 'none';
+                editingDonation = null;
+                resetDonationForm();
+            }
+        }
+
+        function resetDonationForm() {
+            const form = document.getElementById('donationForm');
+            if (form) form.reset();
+            
+            const elements = {
+                'donationProjectGoal': 10000,
+                'donationCurrentAmount': 0,
+                'donationPriority': 5
+            };
+
+            Object.entries(elements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.value = value;
+            });
+
+            const useDefaultImage = document.getElementById('useDefaultImage');
+            if (useDefaultImage) useDefaultImage.checked = true;
+
+            const preview = document.getElementById('donationImagePreview');
+            if (preview) preview.innerHTML = '';
+        }
+
+        function saveDonationProject() {
+            try {
+                const mangaId = document.getElementById('donationMangaSelect').value;
+                const projectTitle = document.getElementById('donationProjectTitle').value.trim();
+                const goal = parseInt(document.getElementById('donationProjectGoal').value);
+                const currentAmount = parseInt(document.getElementById('donationCurrentAmount').value) || 0;
+                const status = document.getElementById('donationProjectStatus').value;
+                const priority = parseInt(document.getElementById('donationPriority').value) || 5;
+                const projectImage = document.getElementById('donationProjectImage').value.trim();
+                const useDefaultImage = document.getElementById('useDefaultImage').checked;
+                const description = document.getElementById('donationDescription').value.trim();
+
+                if (!mangaId) {
+                    throw new Error('Выберите тайтл для проекта');
+                }
+
+                if (!goal || goal < 1000) {
+                    throw new Error('Цель доната должна быть не менее 1000₽');
+                }
+
+                const manga = window.MangaAPI.getMangaById(mangaId);
+                if (!manga) {
+                    throw new Error('Выбранный тайтл не найден');
+                }
+
+                const donationData = {
+                    id: editingDonation ? editingDonation.id : donationIdCounter++,
+                    mangaId: mangaId,
+                    title: projectTitle || manga.title,
+                    goal: goal,
+                    currentAmount: Math.min(currentAmount, goal),
+                    status: status,
+                    priority: priority,
+                    image: useDefaultImage ? null : projectImage,
+                    description: description,
+                    createdAt: editingDonation ? editingDonation.createdAt : new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (editingDonation) {
+                    const index = donationProjects.findIndex(p => p.id === editingDonation.id);
+                    if (index !== -1) {
+                        donationProjects[index] = donationData;
+                        showNotification('Донат-проект обновлен!', 'success');
+                    }
+                } else {
+                    donationProjects.push(donationData);
+                    showNotification('Донат-проект создан!', 'success');
+                }
+
+                saveDonationProjects();
+                loadDonationProjectsList();
+                loadDashboard();
+                hideDonationForm();
+
+            } catch (error) {
+                console.error('Ошибка сохранения донат-проекта:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        function loadDonationProjectsList() {
+            const container = document.getElementById('donationProjectsList');
+            if (!container) return;
+
+            if (donationProjects.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--secondary-color);">
+                        <h3>💰 Нет донат-проектов</h3>
+                        <p>Создайте первый проект для сбора донатов</p>
+                        <button class="btn btn-donation" onclick="showAddDonationForm()" style="margin-top: 16px;">
+                            ➕ Создать проект
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedProjects = [...donationProjects].sort((a, b) => {
+                if (a.status === 'active' && b.status !== 'active') return -1;
+                if (a.status !== 'active' && b.status === 'active') return 1;
+                return (b.priority || 5) - (a.priority || 5);
+            });
+
+            container.innerHTML = `
+                <div class="donation-projects-list">
+                    ${sortedProjects.map(project => renderDonationProjectCard(project)).join('')}
+                </div>
+            `;
+        }
+
+        function renderDonationProjectCard(project) {
+            if (!window.MangaAPI) return '';
+
+            const manga = window.MangaAPI.getMangaById(project.mangaId);
+            if (!manga) return '';
+
+            const progress = Math.min((project.currentAmount / project.goal) * 100, 100);
+            const image = project.image || manga.image || `https://via.placeholder.com/50x70/8b5cf6/FFFFFF?text=${encodeURIComponent(project.title.charAt(0))}`;
+            
+            const statusText = {
+                'active': 'Активен',
+                'completed': 'Завершен',
+                'paused': 'Приостановлен'
+            };
+
+            return `
+                <div class="donation-project-item">
+                    <div class="donation-project-header">
+                        <div class="donation-project-info">
+                            <img src="${image}" alt="${project.title}" class="donation-project-poster"
+                                 onerror="this.src='https://via.placeholder.com/50x70/8b5cf6/FFFFFF?text=${encodeURIComponent(project.title.charAt(0))}'">
+                            <div class="donation-project-details">
+                                <div class="donation-project-title">${project.title}</div>
+                                <div class="donation-project-manga">📚 ${manga.title}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: right;">
+                            <span class="status-badge ${getStatusClass(project.status)}">${statusText[project.status]}</span>
+                            <div style="font-size: 0.75rem; color: var(--secondary-color); margin-top: 4px;">
+                                Приоритет: ${project.priority || 5}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 16px;">
+                        <div class="donation-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span>${project.currentAmount.toLocaleString()}₽</span>
+                                <span>${project.goal.toLocaleString()}₽</span>
+                            </div>
+                            <div style="text-align: center; font-size: 0.875rem; color: var(--secondary-color); margin-top: 4px;">
+                                ${progress.toFixed(1)}% от цели
+                            </div>
+                        </div>
+
+                        ${project.description ? `
+                            <div style="margin-top: 12px; padding: 8px; background: var(--bg-color); border-radius: 6px; font-size: 0.875rem; color: var(--secondary-color);">
+                                ${project.description}
+                            </div>
+                        ` : ''}
+
+                        <div class="quick-update">
+                            <input type="number" class="quick-amount-input" id="quickAmount${project.id}" min="0" placeholder="Сумма" value="">
+                            <button class="quick-update-btn" onclick="quickUpdateDonation(${project.id})">+ Добавить</button>
+                        </div>
+                    </div>
+
+                    <div class="donation-project-actions">
+                        <button class="btn btn-primary" onclick="editDonationProject(${project.id})">✏️ Редактировать</button>
+                        <button class="btn btn-warning" onclick="setDonationAmount(${project.id})">💰 Установить сумму</button>
+                        <button class="btn btn-danger" onclick="deleteDonationProject(${project.id})">🗑️ Удалить</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function editDonationProject(id) {
+            const project = donationProjects.find(p => p.id === id);
+            if (!project) return;
+
+            editingDonation = project;
+            showAddDonationForm();
+            
+            // Fill form with existing data
+            document.getElementById('donationMangaSelect').value = project.mangaId;
+            document.getElementById('donationProjectTitle').value = project.title;
+            document.getElementById('donationProjectGoal').value = project.goal;
+            document.getElementById('donationCurrentAmount').value = project.currentAmount;
+            document.getElementById('donationProjectStatus').value = project.status;
+            document.getElementById('donationPriority').value = project.priority || 5;
+            document.getElementById('donationProjectImage').value = project.image || '';
+            document.getElementById('useDefaultImage').checked = !project.image;
+            document.getElementById('donationDescription').value = project.description || '';
+            
+            document.getElementById('donationFormTitle').innerHTML = '<span>✏️</span> Редактировать донат-проект';
+            
+            if (project.image) {
+                previewDonationImage(project.image);
+            }
+        }
+
+        function quickUpdateDonation(id) {
+            const project = donationProjects.find(p => p.id === id);
+            const amountInput = document.getElementById(`quickAmount${id}`);
+            const amount = parseInt(amountInput.value) || 0;
+
+            if (!project) return;
+
+            if (amount < 0) {
+                showNotification('Сумма не может быть отрицательной', 'error');
+                return;
+            }
+
+            project.currentAmount = Math.min(project.currentAmount + amount, project.goal);
+            project.updatedAt = new Date().toISOString();
+
+            saveDonationProjects();
+            loadDonationProjectsList();
+            loadDashboard();
+
+            amountInput.value = '';
+            showNotification(`Добавлено ${amount.toLocaleString()}₽`, 'success');
+        }
+
+        function setDonationAmount(id) {
+            const project = donationProjects.find(p => p.id === id);
+            if (!project) return;
+
+            const newAmount = prompt(`Установить текущую сумму для "${project.title}":`, project.currentAmount);
+            if (newAmount === null) return;
+
+            const amount = parseInt(newAmount) || 0;
+            if (amount < 0) {
+                showNotification('Сумма не может быть отрицательной', 'error');
+                return;
+            }
+
+            project.currentAmount = Math.min(amount, project.goal);
+            project.updatedAt = new Date().toISOString();
+
+            saveDonationProjects();
+            loadDonationProjectsList();
+            loadDashboard();
+
+            showNotification('Сумма обновлена', 'success');
+        }
+
+        function deleteDonationProject(id) {
+            const project = donationProjects.find(p => p.id === id);
+            if (!project) return;
+
+            if (confirm(`Удалить донат-проект "${project.title}"? Это действие нельзя отменить.`)) {
+                donationProjects = donationProjects.filter(p => p.id !== id);
+                saveDonationProjects();
+                loadDonationProjectsList();
+                loadDashboard();
+                showNotification('Донат-проект удален', 'success');
+            }
+        }
+
+        function previewDonationImage(url) {
+            const preview = document.getElementById('donationImagePreview');
+            if (!preview) return;
+            
+            if (!url) {
+                preview.innerHTML = '';
+                return;
+            }
+
+            preview.innerHTML = `
+                <img src="${url}" alt="Preview" class="preview-image" 
+                     onerror="this.parentElement.innerHTML='<p style=color:var(--danger-color)>Ошибка загрузки изображения</p>'">
+            `;
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification show ${type}`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function logout() {
+            if (confirm('Выйти из админ-панели?')) {
+                isAuthenticated = false;
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('adminPanel').style.display = 'none';
+                document.getElementById('passwordInput').value = '';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAdmin();
+            console.log('🦊 Light Fox Manga - Полная админ-панель готова!');
+        });
+
+        // Load external scripts
+        (function loadExternalScripts() {
+            // Load AuthSystem
+            const authScript = document.createElement('script');
+            authScript.src = 'js/auth.js';
+            authScript.onload = () => {
+                console.log('✅ AuthSystem загружена');
+                window.dispatchEvent(new CustomEvent('authSystemReady'));
+            };
+            authScript.onerror = () => {
+                console.warn('⚠️ Не удалось загрузить AuthSystem');
+            };
+            document.head.appendChild(authScript);
+        })();
+    </script>
+</body>
+</html>
