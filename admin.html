@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Fox Manga - Админ-панель</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <form class="login-form" id="loginForm">
+            <h2 class="login-title">🔥 Админ-панель</h2>
+            <input type="password" class="login-input" id="passwordInput" placeholder="Введите пароль" required>
+            <button type="submit" class="login-btn">Войти</button>
+        </form>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-logo">🔥 ADMIN</div>
+            
+            <nav class="admin-nav">
+                <button class="nav-btn active" onclick="showSection('dashboard')">Обзор</button>
+                <button class="nav-btn" onclick="showSection('manga-list')">Тайтлы</button>
+                <button class="nav-btn" onclick="showSection('add-manga')">Добавить</button>
+                <button class="nav-btn donations" onclick="showSection('donations')">💰 Донаты</button>
+            </nav>
+            
+            <div class="admin-controls">
+                <a href="index.html" class="btn btn-secondary">🌐 На сайт</a>
+                <button class="logout-btn" onclick="logout()">Выйти</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="content-section active">
+                    <div class="section-header">
+                        <h2 class="section-title">Панель управления</h2>
+                    </div>
+                    <div class="section-content">
+                        <div class="dashboard-grid" id="dashboardStats">
+                            <!-- Статистика будет сгенерирована JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manga List Section -->
+                <div id="manga-list-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Список тайтлов</h2>
+                        <button class="btn btn-primary" onclick="showSection('add-manga')">
+                            ➕ Добавить тайтл
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <div class="manga-list" id="mangaList">
+                            <!-- Список тайтлов будет сгенерирован JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Manga Section -->
+                <div id="add-manga-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title" id="formTitle">Добавить новый тайтл</h2>
+                        <button class="btn btn-secondary" onclick="resetForm()">
+                            🔄 Очистить форму
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <form id="mangaForm">
+                            <!-- Основная информация -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Название тайтла *</label>
+                                    <input type="text" class="form-input" id="mangaTitle" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Тип *</label>
+                                    <select class="form-select" id="mangaType" required>
+                                        <option value="">Выберите тип</option>
+                                        <option value="Манга">Манга</option>
+                                        <option value="Манхва">Манхва</option>
+                                        <option value="Маньхуа">Маньхуа</option>
+                                        <option value="Аниме">Аниме</option>
+                                        <option value="Западный комикс">Западный комикс</option>
+                                        <option value="Веб-комикс">Веб-комикс</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Статус *</label>
+                                    <select class="form-select" id="mangaStatus" required>
+                                        <option value="">Выберите статус</option>
+                                        <option value="Анонс">Анонс</option>
+                                        <option value="Выходит">Выходит</option>
+                                        <option value="Продолжается">Продолжается</option>
+                                        <option value="Завершён">Завершён</option>
+                                        <option value="Заморожен">Заморожен</option>
+                                        <option value="Лицензировано">Лицензировано</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Год выпуска</label>
+                                    <input type="number" class="form-input" id="mangaYear" min="1900" max="2030">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Рейтинг (1-10)</label>
+                                    <input type="number" class="form-input" id="mangaRating" min="1" max="10" step="0.1">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Цель доната (₽)</label>
+                                    <input type="number" class="form-input" id="donationGoal" min="1000" value="10000">
+                                </div>
+                            </div>
+
+                            <!-- Количество глав -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Доступно глав</label>
+                                    <input type="number" class="form-input" id="availableChapters" min="0" placeholder="Сколько глав доступно (например: 5)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Всего глав</label>
+                                    <input type="number" class="form-input" id="totalChapters" min="1" placeholder="Общее количество глав (например: 99)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Предпросмотр</label>
+                                    <div style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); font-weight: 600;" id="chaptersPreview">
+                                        Главы: 0/0
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">URL обложки</label>
+                                <input type="url" class="form-input" id="mangaImage" placeholder="https://example.com/image.jpg" onchange="previewImage(this.value)">
+                                <div class="image-preview" id="imagePreview"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Описание</label>
+                                <textarea class="form-textarea" id="mangaDescription" rows="4"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Жанры</label>
+                                <input type="text" class="form-input" id="genreInput" placeholder="Введите жанр и нажмите Enter">
+                                <div class="tags-container" id="genreTags"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Категории</label>
+                                <input type="text" class="form-input" id="categoryInput" placeholder="Введите категорию и нажмите Enter">
+                                <div class="tags-container" id="categoryTags"></div>
+                            </div>
+
+                            <!-- Episodes Manager -->
+                            <div class="episodes-manager">
+                                <div class="episodes-header">
+                                    <h3 class="episodes-title">
+                                        <span>📺</span>
+                                        Управление сериями
+                                    </h3>
+                                    <button type="button" class="add-episode-btn" onclick="addNewEpisode()">
+                                        <span>➕</span>
+                                        Добавить серию
+                                    </button>
+                                </div>
+
+                                <div class="auto-number-controls">
+                                    <button type="button" class="auto-number-btn" onclick="sortEpisodes()">
+                                        📊 Сортировать
+                                    </button>
+                                    <span style="font-size: 0.875rem; color: var(--secondary-color);">
+                                        Используйте диапазоны глав, например: от 1 до 9, от 10 до 20
+                                    </span>
+                                </div>
+
+                                <div class="episodes-list" id="episodesList">
+                                    <div class="episodes-empty">
+                                        <h4>Нет добавленных серий</h4>
+                                        <p>Нажмите кнопку "Добавить серию" для создания первой серии</p>
+                                    </div>
+                                </div>
+
+                                <div class="episodes-summary" id="episodesSummary">
+                                    <strong>Итого:</strong> 0 серий, 0 с видео, 0 готовых к публикации
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button type="submit" class="btn btn-success">
+                                    💾 Сохранить тайтл
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                    🔄 Очистить форму
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="previewManga()">
+                                    👁️ Предпросмотр
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Donations Section -->
+                <div id="donations-section" class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">💰 Управление донатами</h2>
+                        <button class="btn btn-donation" onclick="showAddDonationForm()">
+                            ➕ Создать проект
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <!-- Add Donation Form -->
+                        <div id="donationFormContainer" style="display: none;">
+                            <form id="donationForm" style="margin-bottom: 30px; padding: 20px; background: var(--bg-color); border-radius: 12px; border: 2px solid var(--donation-color);">
+                                <h3 style="margin-bottom: 20px; color: var(--donation-color); display: flex; align-items: center; gap: 8px;" id="donationFormTitle">
+                                    <span>🎯</span>
+                                    Создать донат-проект
+                                </h3>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Выберите тайтл *</label>
+                                        <select class="form-select" id="donationMangaSelect" required>
+                                            <option value="">Выберите тайтл</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Название проекта</label>
+                                        <input type="text" class="form-input" id="donationProjectTitle" placeholder="Оставьте пустым для использования названия тайтла">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Цель доната (₽) *</label>
+                                        <input type="number" class="form-input" id="donationProjectGoal" min="1000" value="10000" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Текущая сумма (₽)</label>
+                                        <input type="number" class="form-input" id="donationCurrentAmount" min="0" value="0">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Статус проекта</label>
+                                        <select class="form-select" id="donationProjectStatus">
+                                            <option value="active">Активен</option>
+                                            <option value="completed">Завершен</option>
+                                            <option value="paused">Приостановлен</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Приоритет (1-10)</label>
+                                        <input type="number" class="form-input" id="donationPriority" min="1" max="10" value="5">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">URL изображения проекта</label>
+                                    <input type="url" class="form-input" id="donationProjectImage" placeholder="https://example.com/project-image.jpg" onchange="previewDonationImage(this.value)">
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="useDefaultImage" checked>
+                                        <label for="useDefaultImage">Использовать обложку тайтла</label>
+                                    </div>
+                                    <div class="image-preview" id="donationImagePreview"></div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Описание цели доната</label>
+                                    <textarea class="form-textarea" id="donationDescription" rows="3" placeholder="Например: Поддержите перевод следующих глав или озвучку серий"></textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <button type="submit" class="btn btn-donation">
+                                        💾 Сохранить проект
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" onclick="hideDonationForm()">
+                                        ❌ Отмена
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="resetDonationForm()">
+                                        🔄 Очистить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Donation Projects List -->
+                        <div id="donationProjectsList">
+                            <!-- Будет заполнено JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+       <script src="js/data.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

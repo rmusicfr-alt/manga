@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест системы данных</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .test-error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .test-warning {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #ff8a50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ff7043;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🦊 Тест системы данных Light Fox Manga</h1>
+    
+    <div id="testResults"></div>
+    
+    <h2>🔧 Консоль браузера:</h2>
+    <div id="consoleOutput" class="console-output">Открытие консоли...</div>
+    
+    <h2>🎮 Тестовые команды:</h2>
+    <button onclick="testBasicAPI()">Тест базового API</button>
+    <button onclick="testFilterAPI()">Тест фильтрации</button>
+    <button onclick="testAddManga()">Добавить тестовую мангу</button>
+    <button onclick="clearTestData()">Очистить тестовые данные</button>
+    <button onclick="refreshPage()">Обновить страницу</button>
+
+    <script src="js/data.js"></script>
+    <script>
+        // Перехватываем console.log для отображения в HTML
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : '✅';
+            consoleOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+
+        // Автоматические тесты
+        function runTests() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+            
+            // Тест 1: Проверка загрузки MangaAPI
+            addTestResult(
+                'Загрузка MangaAPI',
+                !!window.MangaAPI,
+                window.MangaAPI ? 'API успешно загружен' : 'API не загружен'
+            );
+            
+            // Тест 2: Проверка данных
+            const mangaCount = window.MangaAPI ? window.MangaAPI.getAllManga().length : 0;
+            addTestResult(
+                'Проверка данных',
+                mangaCount > 0,
+                `Найдено ${mangaCount} тайтлов`
+            );
+            
+            // Тест 3: Проверка фильтрации
+            if (window.MangaAPI) {
+                const filtered = window.MangaAPI.filterManga({ search: 'поднятие' });
+                addTestResult(
+                    'Тест поиска',
+                    filtered.length > 0,
+                    `Поиск "поднятие" вернул ${filtered.length} результатов`
+                );
+            }
+            
+            // Тест 4: Проверка жанров
+            if (window.MangaAPI) {
+                const genres = window.MangaAPI.getGenres();
+                addTestResult(
+                    'Загрузка жанров',
+                    genres.length > 0,
+                    `Загружено ${genres.length} жанров`
+                );
+            }
+            
+            // Тест 5: Проверка событий
+            let eventReceived = false;
+            window.addEventListener('mangaDataReady', () => {
+                eventReceived = true;
+                addTestResult(
+                    'События готовности данных',
+                    true,
+                    'Событие mangaDataReady получено'
+                );
+            });
+            
+            setTimeout(() => {
+                if (!eventReceived) {
+                    addTestResult(
+                        'События готовности данных',
+                        false,
+                        'Событие mangaDataReady не получено'
+                    );
+                }
+            }, 1000);
+        }
+        
+        function addTestResult(name, success, message) {
+            const results = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? '' : 'test-error'}`;
+            div.innerHTML = `
+                <strong>${success ? '✅' : '❌'} ${name}</strong><br>
+                ${message}
+            `;
+            results.appendChild(div);
+        }
+        
+        function testBasicAPI() {
+            console.log('=== Тест базового API ===');
+            if (window.MangaAPI) {
+                const manga = window.MangaAPI.getAllManga();
+                console.log('Все тайтлы:', manga);
+                console.log('Первый тайтл:', manga[0]);
+                console.log('Тайтл с ID 1:', window.MangaAPI.getMangaById(1));
+            } else {
+                console.error('MangaAPI недоступен');
+            }
+        }
+        
+        function testFilterAPI() {
+            console.log('=== Тест фильтрации ===');
+            if (window.MangaAPI) {
+                console.log('Поиск "начало":', window.MangaAPI.filterManga({ search: 'начало' }));
+                console.log('Фильтр по жанру "Экшен":', window.MangaAPI.filterManga({ genres: ['Экшен'] }));
+                console.log('Сортировка по рейтингу:', window.MangaAPI.filterManga({ sortBy: 'rating' }));
+            } else {
+                console.error('MangaAPI недоступен');
+            }
+        }
+        
+        function testAddManga() {
+            console.log('=== Добавление тестовой манги ===');
+            if (window.MangaDebug) {
+                const newManga = window.MangaDebug.addTestManga();
+                console.log('Добавленная манга:', newManga);
+                runTests(); // Перезапускаем тесты
+            } else {
+                console.error('MangaDebug недоступен');
+            }
+        }
+        
+        function clearTestData() {
+            if (confirm('Очистить все данные? Это действие нельзя отменить!')) {
+                if (window.MangaDebug) {
+                    window.MangaDebug.clearAll();
+                }
+            }
+        }
+        
+        function refreshPage() {
+            location.reload();
+        }
+        
+        // Запускаем тесты при загрузке
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+        
+        // Также запускаем при получении события готовности данных
+        window.addEventListener('mangaDataReady', () => {
+            setTimeout(runTests, 100);
+        });
+    </script>
+</body>
+</html>
