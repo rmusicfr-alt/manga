@@ -85,13 +85,16 @@
             const userData = JSON.parse(localStorage.getItem('currentUser') || 'null');
             
             if (reallyLoggedIn && userData) {
+            }
             // Показываем popup авторизации
             if (typeof showAuthPopup === 'function') {
                 showAuthPopup('login');
             } else {
                 // Fallback - перенаправляем на страницу регистрации
+            }
             if (!confirm('Вы уверены, что хотите выйти?')) {
                 return;
+            }
             alert('Страница подписок будет доступна в следующем обновлении!');
             
             if (window.LightFoxAPI && window.LightFoxAPI.isAuthenticated()) {
