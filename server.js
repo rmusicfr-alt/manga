@@ -1,9 +1,7 @@
 const express = require('express');
 const session = require('express-session');
-const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
 const morgan = require('morgan');
@@ -16,6 +14,16 @@ const mangaRoutes = require('./server/routes/manga');
 const donationRoutes = require('./server/routes/donations');
 const adminRoutes = require('./server/routes/admin');
 const userRoutes = require('./server/routes/users');
+const { 
+    generalLimiter, 
+    authLimiter, 
+    apiLimiter, 
+    adminLimiter, 
+    helmetConfig,
+    securityLogger,
+    csrfProtection 
+} = require('./server/utils/security');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,65 +31,56 @@ const PORT = process.env.PORT || 3000;
 // Инициализация базы данных
 const db = new Database();
 
+// Trust proxy для правильного получения IP адресов
+app.set('trust proxy', 1);
+
 // Middleware для безопасности
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "https:", "http:"],
-            connectSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'", "https:", "http:"],
-            frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com"]
-        }
-    }
-}));
+app.use(helmet(helmetConfig));
+
+// Middleware для логирования безопасности
+app.use(securityLogger);
 
 // Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 минут
-    max: 100, // максимум 100 запросов с одного IP
-    message: 'Слишком много запросов с этого IP, попробуйте позже.'
-});
-
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5, // максимум 5 попыток входа за 15 минут
-    message: 'Слишком много попыток входа, попробуйте позже.'
-});
-
 app.use('/api/auth', authLimiter);
-app.use(limiter);
+app.use('/api/admin', adminLimiter);
+app.use('/api', apiLimiter);
+app.use(generalLimiter);
 
 // Основные middleware
 app.use(compression());
-app.use(morgan('combined'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// CSRF защита
+app.use(csrfProtection);
+
 // Сессии
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'lightfox-manga-secret-key-2025',
+    secret: process.env.SESSION_SECRET || 'fallback-session-secret',
     resave: false,
     saveUninitialized: false,
+    name: 'lightfox.sid',
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 часа
+        maxAge: 24 * 60 * 60 * 1000, // 24 часа
+        sameSite: 'strict'
     }
 }));
 
 // Статические файлы
 app.use(express.static(path.join(__dirname), {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+    etag: true,
+    lastModified: true
 }));
 
 // Middleware для передачи db в routes
@@ -103,7 +102,7 @@ app.get('/', (req, res) => {
 });
 
 // Обработка всех HTML страниц
-const pages = ['catalog', 'cabinet', 'player', 'admin', 'subscriptions', 'registr'];
+const pages = ['catalog', 'cabinet', 'player', 'admin', 'subscriptions', 'registr', 'test'];
 pages.forEach(page => {
     app.get(`/${page}`, (req, res) => {
         res.sendFile(path.join(__dirname, `${page}.html`));
@@ -116,13 +115,20 @@ app.get('/api/health', (req, res) => {
         status: 'OK',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        version: '1.0.0'
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
 // Обработка ошибок
 app.use((err, req, res, next) => {
-    console.error('Ошибка сервера:', err);
+    console.error(`❌ Ошибка сервера [${req.method} ${req.path}]:`, err);
+    
+    // Логируем подозрительные ошибки
+    if (err.status === 400 || err.status === 401 || err.status === 403) {
+        console.warn(`🚨 Подозрительный запрос: ${req.method} ${req.path} от IP: ${req.ip}`);
+    }
+    
     res.status(500).json({
         error: 'Внутренняя ошибка сервера',
         message: process.env.NODE_ENV === 'development' ? err.message : 'Что-то пошло не так'
@@ -139,28 +145,48 @@ app.use((req, res) => {
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🦊 Light Fox Manga Server запущен на порту ${PORT}`);
     console.log(`🌐 Откройте http://localhost:${PORT} в браузере`);
     console.log(`📊 Админка доступна по адресу http://localhost:${PORT}/admin`);
+    console.log(`🔒 Режим: ${process.env.NODE_ENV || 'development'}`);
     
     // Инициализация базы данных
     db.init().then(() => {
         console.log('✅ База данных инициализирована');
     }).catch(err => {
         console.error('❌ Ошибка инициализации базы данных:', err);
+        process.exit(1);
     });
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('🔄 Получен сигнал SIGTERM, завершение работы...');
-    db.close();
-    process.exit(0);
+const gracefulShutdown = (signal) => {
+    console.log(`🔄 Получен сигнал ${signal}, завершение работы...`);
+    
+    server.close(() => {
+        console.log('🔄 HTTP сервер закрыт');
+        db.close();
+        console.log('🔄 База данных закрыта');
+        process.exit(0);
+    });
+    
+    // Принудительное завершение через 10 секунд
+    setTimeout(() => {
+        console.error('❌ Принудительное завершение работы');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Обработка необработанных ошибок
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Необработанное отклонение промиса:', reason);
 });
 
-process.on('SIGINT', () => {
-    console.log('🔄 Получен сигнал SIGINT, завершение работы...');
-    db.close();
-    process.exit(0);
+process.on('uncaughtException', (error) => {
+    console.error('❌ Необработанное исключение:', error);
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
 });

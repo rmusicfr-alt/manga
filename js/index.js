@@ -80,44 +80,62 @@
         // Menu functionality
         function toggleMenu() {
             const sideMenu = document.getElementById('sideMenu');
-            const menuOverlay = document.getElementById('menuOverlay');
+            // Проверяем реальный статус авторизации
+            const reallyLoggedIn = window.LightFoxAPI && window.LightFoxAPI.isAuthenticated();
+            const userData = JSON.parse(localStorage.getItem('currentUser') || 'null');
             
-            sideMenu.classList.toggle('open');
-            menuOverlay.classList.toggle('show');
-        }
-
-        function closeMenu() {
-            const sideMenu = document.getElementById('sideMenu');
-            const menuOverlay = document.getElementById('menuOverlay');
-            
-            sideMenu.classList.remove('open');
-            menuOverlay.classList.remove('show');
-        }
-
-        function login() {
-            alert('Функция входа будет реализована позже');
-        }
-
-        function logout() {
-            alert('Функция выхода будет реализована позже');
-            closeMenu();
-        }
-
-        // Subscription page functionality
-        function openSubscriptionPage() {
+            if (reallyLoggedIn && userData) {
+            // Показываем popup авторизации
+            if (typeof showAuthPopup === 'function') {
+                showAuthPopup('login');
+            } else {
+                // Fallback - перенаправляем на страницу регистрации
+            if (!confirm('Вы уверены, что хотите выйти?')) {
+                return;
             alert('Страница подписок будет доступна в следующем обновлении!');
+            
+            if (window.LightFoxAPI && window.LightFoxAPI.isAuthenticated()) {
+                window.LightFoxAPI.logout()
+                    .then(() => {
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('isLoggedIn');
+                        updateAuthState();
+                        closeMenu();
+                        showNotification('Вы успешно вышли из системы', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Ошибка выхода:', error);
+                        // Принудительный выход
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('isLoggedIn');
+                        updateAuthState();
+                        closeMenu();
+                    });
+            } else {
+                // Локальный выход
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('isLoggedIn');
+                updateAuthState();
+                closeMenu();
+                showNotification('Вы вышли из системы', 'success');
+            }
         }
 
         // Random manga functionality
         function openRandomManga() {
-            if (window.MangaAPI) {
-                const allManga = window.MangaAPI.getAllManga();
-                if (allManga.length > 0) {
-                    const randomManga = allManga[Math.floor(Math.random() * allManga.length)];
-                    window.location.href = `player.html?id=${randomManga.id}`;
-                } else {
-                    alert('Каталог пуст. Добавьте тайтлы через админку!');
-                }
+            if (window.LightFoxAPI) {
+                window.LightFoxAPI.getRandomManga()
+                    .then(randomManga => {
+                        if (randomManga) {
+                            window.location.href = `player.html?id=${randomManga.id}`;
+                        } else {
+                            alert('Каталог пуст. Добавьте тайтлы через админку!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка получения случайной манги:', error);
+                        alert('Ошибка загрузки случайной манги');
+                    });
             } else {
                 alert('Система данных не загружена');
             }
@@ -139,52 +157,57 @@
 
         // Carousel functionality
         function createCarousel() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI) return;
 
-            const allManga = window.MangaAPI.getAllManga();
-            const featuredManga = allManga.slice(0, 5); // Top 5 manga for carousel
+            window.LightFoxAPI.getAllManga({ limit: 5, sortBy: 'popularity' })
+                .then(allManga => {
+                    const featuredManga = allManga.slice(0, 5); // Top 5 manga for carousel
 
-            const carouselContainer = document.getElementById('heroCarousel');
-            const indicatorsContainer = document.getElementById('carouselIndicators');
+                    const carouselContainer = document.getElementById('heroCarousel');
+                    const indicatorsContainer = document.getElementById('carouselIndicators');
 
-            // Create slides
-            carouselContainer.innerHTML = featuredManga.map((manga, index) => `
-                <div class="carousel-slide ${index === 0 ? 'active' : ''}" 
-                     style="background-image: url('${manga.image || 'https://via.placeholder.com/1200x450/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title)}')">
-                    <div class="slide-overlay"></div>
-                    <div class="slide-content">
-                        <h1 class="slide-title">${manga.title}</h1>
-                        <p class="slide-description">${manga.description || 'Захватывающая история, которая не оставит вас равнодушными.'}</p>
-                        <div class="slide-meta">
-                            <span class="slide-badge">${manga.type}</span>
-                            <span class="slide-badge">⭐ ${manga.rating}</span>
-                            <span class="slide-badge">Глав: ${manga.availableEpisodes}/${manga.totalEpisodes}</span>
+                    // Create slides
+                    carouselContainer.innerHTML = featuredManga.map((manga, index) => `
+                        <div class="carousel-slide ${index === 0 ? 'active' : ''}" 
+                             style="background-image: url('${manga.image_url || 'https://via.placeholder.com/1200x450/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title)}')">
+                            <div class="slide-overlay"></div>
+                            <div class="slide-content">
+                                <h1 class="slide-title">${manga.title}</h1>
+                                <p class="slide-description">${manga.description || 'Захватывающая история, которая не оставит вас равнодушными.'}</p>
+                                <div class="slide-meta">
+                                    <span class="slide-badge">${manga.type}</span>
+                                    <span class="slide-badge">⭐ ${manga.rating}</span>
+                                    <span class="slide-badge">Глав: ${manga.available_chapters}/${manga.total_chapters}</span>
+                                </div>
+                                <div class="slide-actions">
+                                    <a href="player.html?id=${manga.id}" class="btn btn-primary">
+                                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                        Читать
+                                    </a>
+                                    <a href="#" class="btn btn-secondary" onclick="addToFavorites(${manga.id})">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                        В избранное
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <div class="slide-actions">
-                            <a href="player.html?id=${manga.id}" class="btn btn-primary">
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                </svg>
-                                Читать
-                            </a>
-                            <a href="#" class="btn btn-secondary">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                                </svg>
-                                В избранное
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                    `).join('');
 
-            // Create indicators
-            indicatorsContainer.innerHTML = featuredManga.map((_, index) => `
-                <div class="indicator ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>
-            `).join('');
+                    // Create indicators
+                    indicatorsContainer.innerHTML = featuredManga.map((_, index) => `
+                        <div class="indicator ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></div>
+                    `).join('');
 
-            // Start auto-play
-            startCarousel();
+                    // Start auto-play
+                    startCarousel();
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки карусели:', error);
+                });
         }
 
         function goToSlide(index) {
@@ -218,12 +241,12 @@
 
         // Render manga card
         function renderMangaCard(manga, showBadge = '') {
-            const timeAgo = manga.updatedAt ? formatTime(manga.updatedAt) : formatTime(new Date());
+            const timeAgo = manga.updated_at ? formatTime(manga.updated_at) : formatTime(new Date());
             
             return `
                 <div class="manga-card" onclick="window.location.href='player.html?id=${manga.id}'">
                     <div class="card-image-container">
-                        <img src="${manga.image || 'https://via.placeholder.com/300x400/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title.charAt(0))}" 
+                        <img src="${manga.image_url || 'https://via.placeholder.com/300x400/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title.charAt(0))}" 
                              alt="${manga.title}" 
                              class="card-image"
                              onerror="this.src='https://via.placeholder.com/300x400/FF6B35/FFFFFF?text=' + encodeURIComponent('${manga.title.charAt(0)}')">
@@ -245,27 +268,31 @@
 
         // Load content sections
         function loadHotNew() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI) return;
 
-            const allManga = window.MangaAPI.getAllManga();
-            const hotNew = allManga
-                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-                .slice(0, 8);
-
-            const grid = document.getElementById('hotNewGrid');
-            grid.innerHTML = hotNew.map(manga => renderMangaCard(manga, 'new')).join('');
+            window.LightFoxAPI.getAllManga({ sortBy: 'updated', limit: 8 })
+                .then(hotNew => {
+                    const grid = document.getElementById('hotNewGrid');
+                    grid.innerHTML = hotNew.map(manga => renderMangaCard(manga, 'new')).join('');
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки новинок:', error);
+                    document.getElementById('hotNewGrid').innerHTML = '<p>Ошибка загрузки</p>';
+                });
         }
 
         function loadPopular() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI) return;
 
-            const allManga = window.MangaAPI.getAllManga();
-            const popular = allManga
-                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-                .slice(0, 8);
-
-            const grid = document.getElementById('popularGrid');
-            grid.innerHTML = popular.map(manga => renderMangaCard(manga, 'hot')).join('');
+            window.LightFoxAPI.getAllManga({ sortBy: 'rating', limit: 8 })
+                .then(popular => {
+                    const grid = document.getElementById('popularGrid');
+                    grid.innerHTML = popular.map(manga => renderMangaCard(manga, 'hot')).join('');
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки популярного:', error);
+                    document.getElementById('popularGrid').innerHTML = '<p>Ошибка загрузки</p>';
+                });
         }
 
         function loadNews() {
@@ -283,27 +310,29 @@
         }
 
         function loadRecentUpdates() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI) return;
 
-            const allManga = window.MangaAPI.getAllManga();
-            const recentUpdates = allManga
-                .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
-                .slice(0, 10);
-
-            const list = document.getElementById('updatesList');
-            list.innerHTML = recentUpdates.map(manga => `
-                <div class="update-item" onclick="window.location.href='player.html?id=${manga.id}'">
-                    <img src="${manga.image || 'https://via.placeholder.com/60x80/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title.charAt(0))}" 
-                         alt="${manga.title}" 
-                         class="update-image"
-                         onerror="this.src='https://via.placeholder.com/60x80/FF6B35/FFFFFF?text=' + encodeURIComponent('${manga.title.charAt(0)}')">
-                    <div class="update-content">
-                        <h4 class="update-title">${manga.title}</h4>
-                        <p class="update-chapter">Глава ${manga.availableEpisodes || 1} • ${manga.type}</p>
-                        <p class="update-time">${formatTime(manga.updatedAt || manga.createdAt || new Date())}</p>
-                    </div>
-                </div>
-            `).join('');
+            window.LightFoxAPI.getAllManga({ sortBy: 'updated', limit: 10 })
+                .then(recentUpdates => {
+                    const list = document.getElementById('updatesList');
+                    list.innerHTML = recentUpdates.map(manga => `
+                        <div class="update-item" onclick="window.location.href='player.html?id=${manga.id}'">
+                            <img src="${manga.image_url || 'https://via.placeholder.com/60x80/FF6B35/FFFFFF?text=' + encodeURIComponent(manga.title.charAt(0))}" 
+                                 alt="${manga.title}" 
+                                 class="update-image"
+                                 onerror="this.src='https://via.placeholder.com/60x80/FF6B35/FFFFFF?text=' + encodeURIComponent('${manga.title.charAt(0)}')">
+                            <div class="update-content">
+                                <h4 class="update-title">${manga.title}</h4>
+                                <p class="update-chapter">Глава ${manga.available_chapters || 1} • ${manga.type}</p>
+                                <p class="update-time">${formatTime(manga.updated_at || manga.created_at || new Date())}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки обновлений:', error);
+                    document.getElementById('updatesList').innerHTML = '<p>Ошибка загрузки</p>';
+                });
         }
 
         // Initialize homepage
@@ -315,6 +344,22 @@
             loadRecentUpdates();
         }
 
+        // Функция добавления в избранное
+        function addToFavorites(mangaId) {
+            if (!window.LightFoxAPI || !window.LightFoxAPI.isAuthenticated()) {
+                login();
+                return;
+            }
+            
+            window.LightFoxAPI.addToList(mangaId, 'favorites')
+                .then(() => {
+                    showNotification('Добавлено в избранное!', 'success');
+                })
+                .catch(error => {
+                    console.error('Ошибка добавления в избранное:', error);
+                    showNotification(error.message || 'Ошибка добавления', 'error');
+                });
+        }
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
             // Theme toggle
@@ -350,17 +395,22 @@
 
             // Initialize
             updateTheme();
+            updateAuthState();
             
             // Load saved language
             const savedLang = localStorage.getItem('language') || 'ru';
             updateLanguage(savedLang);
 
-            // Wait for data to be ready
-            if (window.MangaAPI) {
+            // Wait for API to be ready
+            if (window.LightFoxAPI) {
                 initializeHomepage();
             } else {
-                // Listen for data ready event
-                window.addEventListener('mangaDataReady', initializeHomepage);
+                // Wait for API to load
+                setTimeout(() => {
+                    if (window.LightFoxAPI) {
+                        initializeHomepage();
+                    }
+                }, 1000);
             }
 
             // Pause carousel on hover
@@ -382,3 +432,14 @@
         window.addEventListener('beforeunload', function() {
             stopCarousel();
         });
+
+        // Глобальные функции
+        window.login = login;
+        window.logout = logout;
+        window.toggleMenu = toggleMenu;
+        window.closeMenu = closeMenu;
+        window.openRandomManga = openRandomManga;
+        window.openSubscriptionPage = openSubscriptionPage;
+        window.updateLanguage = updateLanguage;
+        window.goToSlide = goToSlide;
+        window.addToFavorites = addToFavorites;

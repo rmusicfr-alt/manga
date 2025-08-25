@@ -4,29 +4,50 @@
         let editingManga = null;
         let editingDonation = null;
         let isAuthenticated = false;
+        let currentUser = null;
         let donationProjects = [];
         let donationIdCounter = 1;
 
-        // Load donation projects from localStorage
+        // Load donation projects from server
         function loadDonationProjects() {
-            const saved = localStorage.getItem('lightfox_donation_projects');
-            if (saved) {
+            if (window.LightFoxAPI && window.LightFoxAPI.isAuthenticated()) {
                 try {
-                    donationProjects = JSON.parse(saved);
-                    donationIdCounter = Math.max(...donationProjects.map(p => p.id || 0), 0) + 1;
+                    window.LightFoxAPI.getDonationProjects().then(projects => {
+                        donationProjects = projects || [];
+                        donationIdCounter = Math.max(...donationProjects.map(p => p.id || 0), 0) + 1;
+                        loadDonationProjectsList();
+                    }).catch(error => {
+                        console.error('Ошибка загрузки проектов:', error);
+                        donationProjects = [];
+                    });
                 } catch (e) {
                     console.error('Error loading donation projects:', e);
                     donationProjects = [];
                 }
+            } else {
+                // Fallback to localStorage for compatibility
+                const saved = localStorage.getItem('lightfox_donation_projects');
+                if (saved) {
+                    try {
+                        donationProjects = JSON.parse(saved);
+                        donationIdCounter = Math.max(...donationProjects.map(p => p.id || 0), 0) + 1;
+                    } catch (e) {
+                        console.error('Error loading donation projects:', e);
+                        donationProjects = [];
+                    }
+                }
             }
         }
 
-        // Save donation projects to localStorage
+        // Save donation projects to server
         function saveDonationProjects() {
-            try {
-                localStorage.setItem('lightfox_donation_projects', JSON.stringify(donationProjects));
-            } catch (e) {
-                console.error('Error saving donation projects:', e);
+            // Fallback to localStorage for compatibility
+            if (!window.LightFoxAPI || !window.LightFoxAPI.isAuthenticated()) {
+                try {
+                    localStorage.setItem('lightfox_donation_projects', JSON.stringify(donationProjects));
+                } catch (e) {
+                    console.error('Error saving donation projects:', e);
+                }
             }
         }
 
@@ -51,28 +72,58 @@
         // Authentication
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const email = document.getElementById('emailInput').value.trim();
             const password = document.getElementById('passwordInput').value;
             
-            if (password === 'admin123') {
-                isAuthenticated = true;
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                initializeAdmin();
-            } else {
-                showNotification('Неверный пароль!', 'error');
+            if (!email || !password) {
+                showNotification('Введите email и пароль', 'error');
+                return;
             }
+            
+            // Показываем загрузку
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Вход...';
+            
+            // Пытаемся войти через API
+            window.LightFoxAPI.login({ email, password })
+                .then(response => {
+                    if (response.user && response.user.role === 'admin') {
+                        isAuthenticated = true;
+                        currentUser = response.user;
+                        document.getElementById('currentUser').textContent = response.user.username;
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('adminPanel').style.display = 'block';
+                        initializeAdmin();
+                        showNotification('Добро пожаловать в админку!', 'success');
+                    } else {
+                        throw new Error('У вас нет прав администратора');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка входа в админку:', error);
+                    showNotification(error.message || 'Ошибка входа', 'error');
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                });
         });
 
         // Initialize admin panel
         function initializeAdmin() {
-            loadDataSystem().then(() => {
+            // Данные уже загружены через API
+            if (window.LightFoxAPI) {
                 loadDonationProjects();
                 loadDashboard();
                 loadMangaList();
-                loadDonationProjectsList();
                 setupEventListeners();
                 console.log('🔥 Админка с управлением донатами загружена!');
-            });
+            } else {
+                console.error('LightFoxAPI не загружен');
+                showNotification('Ошибка загрузки API', 'error');
+            }
         }
 
         // Setup event listeners
@@ -147,87 +198,109 @@
 
         // Dashboard functions
         function loadDashboard() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI || !window.LightFoxAPI.isAuthenticated()) {
+                document.getElementById('dashboardStats').innerHTML = '<p>Требуется авторизация</p>';
+                return;
+            }
 
-            const stats = window.MangaAPI.getStats();
-            const allManga = window.MangaAPI.getAllManga();
+            // Загружаем статистику с сервера
+            window.LightFoxAPI.getDashboardStats()
+                .then(stats => {
+                    const mangaStats = stats.manga || {};
+                    const donationStats = stats.donations || {};
+                    const userStats = stats.users || {};
             
-            // Add donation stats
-            const totalDonationGoal = donationProjects.reduce((sum, project) => sum + (project.goal || 0), 0);
-            const totalDonationCurrent = donationProjects.reduce((sum, project) => sum + (project.currentAmount || 0), 0);
-            
-            document.getElementById('dashboardStats').innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-number">${stats.totalManga}</div>
-                    <div class="stat-label">Всего тайтлов</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${stats.totalEpisodes}</div>
-                    <div class="stat-label">Всего серий</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${stats.averageRating.toFixed(1)}</div>
-                    <div class="stat-label">Средний рейтинг</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${donationProjects.length}</div>
-                    <div class="stat-label">Донат-проектов</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${totalDonationCurrent.toLocaleString()}₽</div>
-                    <div class="stat-label">Собрано донатов</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${totalDonationGoal.toLocaleString()}₽</div>
-                    <div class="stat-label">Цель донатов</div>
-                </div>
-            `;
+                    document.getElementById('dashboardStats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-number">${mangaStats.total || 0}</div>
+                            <div class="stat-label">Всего тайтлов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${mangaStats.episodes || 0}</div>
+                            <div class="stat-label">Всего серий</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${(mangaStats.averageRating || 0).toFixed(1)}</div>
+                            <div class="stat-label">Средний рейтинг</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${donationStats.projects || 0}</div>
+                            <div class="stat-label">Донат-проектов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${(donationStats.current || 0).toLocaleString()}₽</div>
+                            <div class="stat-label">Собрано донатов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${userStats.total || 0}</div>
+                            <div class="stat-label">Пользователей</div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки статистики:', error);
+                    document.getElementById('dashboardStats').innerHTML = '<p>Ошибка загрузки статистики</p>';
+                });
         }
 
         // Manga list functions
         function loadMangaList() {
-            if (!window.MangaAPI) return;
-
-            const allManga = window.MangaAPI.getAllManga();
-            const container = document.getElementById('mangaList');
-
-            if (allManga.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        <h3>Нет тайтлов</h3>
-                        <p>Добавьте первый тайтл через форму</p>
-                    </div>
-                `;
+            if (!window.LightFoxAPI || !window.LightFoxAPI.isAuthenticated()) {
+                document.getElementById('mangaList').innerHTML = '<p>Требуется авторизация</p>';
                 return;
             }
 
-            container.innerHTML = allManga.map(manga => `
-                <div class="manga-item">
-                    <div class="manga-item-header">
-                        <div class="manga-item-title">${manga.title}</div>
-                        <div class="manga-item-meta">
-                            ${manga.type} • <span class="status-badge ${getStatusClass(manga.status)}">${manga.status}</span> • Главы: ${manga.availableEpisodes || 0}/${manga.totalEpisodes || 0}
+            window.LightFoxAPI.getAllManga()
+                .then(allManga => {
+                    const container = document.getElementById('mangaList');
+
+                    if (allManga.length === 0) {
+                        container.innerHTML = `
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                                <h3>Нет тайтлов</h3>
+                                <p>Добавьте первый тайтл через форму</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = allManga.map(manga => `
+                        <div class="manga-item">
+                            <div class="manga-item-header">
+                                <div class="manga-item-title">${manga.title}</div>
+                                <div class="manga-item-meta">
+                                    ${manga.type} • <span class="status-badge ${getStatusClass(manga.status)}">${manga.status}</span> • Главы: ${manga.available_chapters || 0}/${manga.total_chapters || 0}
+                                </div>
+                            </div>
+                            <div class="manga-item-actions">
+                                <button class="btn btn-primary" onclick="editManga('${manga.id}')">✏️ Редактировать</button>
+                                <button class="btn btn-danger" onclick="deleteManga('${manga.id}')">🗑️ Удалить</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="manga-item-actions">
-                        <button class="btn btn-primary" onclick="editManga('${manga.id}')">✏️ Редактировать</button>
-                        <button class="btn btn-danger" onclick="deleteManga('${manga.id}')">🗑️ Удалить</button>
-                    </div>
-                </div>
-            `).join('');
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки тайтлов:', error);
+                    document.getElementById('mangaList').innerHTML = '<p>Ошибка загрузки тайтлов</p>';
+                });
         }
 
         // Donation Projects Functions
         function loadMangaSelectOptions() {
-            if (!window.MangaAPI) return;
+            if (!window.LightFoxAPI) return;
 
-            const allManga = window.MangaAPI.getAllManga();
-            const select = document.getElementById('donationMangaSelect');
-            
-            select.innerHTML = '<option value="">Выберите тайтл</option>';
-            allManga.forEach(manga => {
-                select.innerHTML += `<option value="${manga.id}">${manga.title}</option>`;
-            });
+            window.LightFoxAPI.getAllManga()
+                .then(allManga => {
+                    const select = document.getElementById('donationMangaSelect');
+                    
+                    select.innerHTML = '<option value="">Выберите тайтл</option>';
+                    allManga.forEach(manga => {
+                        select.innerHTML += `<option value="${manga.id}">${manga.title}</option>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки тайтлов для селекта:', error);
+                });
         }
 
         function showAddDonationForm() {
@@ -273,43 +346,34 @@
                     throw new Error('Цель доната должна быть не менее 1000₽');
                 }
 
-                // Get manga data
-                const manga = window.MangaAPI.getMangaById(mangaId);
-                if (!manga) {
-                    throw new Error('Выбранный тайтл не найден');
-                }
 
                 const donationData = {
-                    id: editingDonation ? editingDonation.id : donationIdCounter++,
-                    mangaId: mangaId,
+                    id: editingDonation ? editingDonation.id : undefined,
+                    manga_id: mangaId,
                     title: projectTitle || manga.title,
-                    goal: goal,
-                    currentAmount: Math.min(currentAmount, goal),
+                    goal_amount: goal,
+                    current_amount: Math.min(currentAmount, goal),
                     status: status,
                     priority: priority,
-                    image: useDefaultImage ? null : projectImage,
+                    image_url: useDefaultImage ? null : projectImage,
                     description: description,
                     createdAt: editingDonation ? editingDonation.createdAt : new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
 
-                if (editingDonation) {
-                    // Update existing project
-                    const index = donationProjects.findIndex(p => p.id === editingDonation.id);
-                    if (index !== -1) {
-                        donationProjects[index] = donationData;
-                        showNotification('Донат-проект обновлен!', 'success');
-                    }
-                } else {
-                    // Add new project
-                    donationProjects.push(donationData);
-                    showNotification('Донат-проект создан!', 'success');
-                }
+                // Сохраняем через API
+                window.LightFoxAPI.saveDonationProject(donationData)
+                    .then(response => {
+                        showNotification(editingDonation ? 'Донат-проект обновлен!' : 'Донат-проект создан!', 'success');
+                        loadDonationProjects();
+                        loadDashboard();
+                        hideDonationForm();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка сохранения проекта:', error);
+                        showNotification(error.message || 'Ошибка сохранения проекта', 'error');
+                    });
 
-                saveDonationProjects();
-                loadDonationProjectsList();
-                loadDashboard();
-                hideDonationForm();
 
             } catch (error) {
                 console.error('Ошибка сохранения донат-проекта:', error);
@@ -348,13 +412,14 @@
         }
 
         function renderDonationProjectCard(project) {
-            if (!window.MangaAPI) return '';
+            if (!window.LightFoxAPI) return '';
 
-            const manga = window.MangaAPI.getMangaById(project.mangaId);
-            if (!manga) return '';
+            // Используем данные из проекта (они уже содержат информацию о манге)
+            const mangaTitle = project.manga_title || 'Неизвестная манга';
+            const mangaImage = project.manga_image;
 
-            const progress = Math.min((project.currentAmount / project.goal) * 100, 100);
-            const image = project.image || manga.image || `https://via.placeholder.com/50x70/8b5cf6/FFFFFF?text=${encodeURIComponent(project.title.charAt(0))}`;
+            const progress = Math.min((project.current_amount / project.goal_amount) * 100, 100);
+            const image = project.image_url || mangaImage || `https://via.placeholder.com/50x70/8b5cf6/FFFFFF?text=${encodeURIComponent(project.title.charAt(0))}`;
             
             const statusText = {
                 'active': 'Активен',
@@ -370,7 +435,7 @@
                                  onerror="this.src='https://via.placeholder.com/50x70/8b5cf6/FFFFFF?text=${encodeURIComponent(project.title.charAt(0))}'">
                             <div class="donation-project-details">
                                 <div class="donation-project-title">${project.title}</div>
-                                <div class="donation-project-manga">📚 ${manga.title}</div>
+                                <div class="donation-project-manga">📚 ${mangaTitle}</div>
                             </div>
                         </div>
                         
@@ -388,8 +453,8 @@
                                 <div class="progress-fill" style="width: ${progress}%"></div>
                             </div>
                             <div class="progress-text">
-                                <span>${project.currentAmount.toLocaleString()}₽</span>
-                                <span>${project.goal.toLocaleString()}₽</span>
+                                <span>${project.current_amount.toLocaleString()}₽</span>
+                                <span>${project.goal_amount.toLocaleString()}₽</span>
                             </div>
                             <div style="text-align: center; font-size: 0.875rem; color: var(--secondary-color); margin-top: 4px;">
                                 ${progress.toFixed(1)}% от цели
@@ -425,20 +490,20 @@
             showAddDonationForm();
             
             // Fill form with existing data
-            document.getElementById('donationMangaSelect').value = project.mangaId;
+            document.getElementById('donationMangaSelect').value = project.manga_id;
             document.getElementById('donationProjectTitle').value = project.title;
-            document.getElementById('donationProjectGoal').value = project.goal;
-            document.getElementById('donationCurrentAmount').value = project.currentAmount;
+            document.getElementById('donationProjectGoal').value = project.goal_amount;
+            document.getElementById('donationCurrentAmount').value = project.current_amount;
             document.getElementById('donationProjectStatus').value = project.status;
             document.getElementById('donationPriority').value = project.priority || 5;
-            document.getElementById('donationProjectImage').value = project.image || '';
-            document.getElementById('useDefaultImage').checked = !project.image;
+            document.getElementById('donationProjectImage').value = project.image_url || '';
+            document.getElementById('useDefaultImage').checked = !project.image_url;
             document.getElementById('donationDescription').value = project.description || '';
             
             document.getElementById('donationFormTitle').innerHTML = '<span>✏️</span> Редактировать донат-проект';
             
-            if (project.image) {
-                previewDonationImage(project.image);
+            if (project.image_url) {
+                previewDonationImage(project.image_url);
             }
         }
 
@@ -454,22 +519,25 @@
                 return;
             }
 
-            project.currentAmount = Math.min(project.currentAmount + amount, project.goal);
-            project.updatedAt = new Date().toISOString();
-
-            saveDonationProjects();
-            loadDonationProjectsList();
-            loadDashboard();
-
-            amountInput.value = '';
-            showNotification(`Добавлено ${amount.toLocaleString()}₽`, 'success');
+            // Обновляем через API
+            window.LightFoxAPI.updateDonationAmount(id, amount)
+                .then(response => {
+                    amountInput.value = '';
+                    showNotification(`Добавлено ${amount.toLocaleString()}₽`, 'success');
+                    loadDonationProjects();
+                    loadDashboard();
+                })
+                .catch(error => {
+                    console.error('Ошибка обновления суммы:', error);
+                    showNotification(error.message || 'Ошибка обновления', 'error');
+                });
         }
 
         function setDonationAmount(id) {
             const project = donationProjects.find(p => p.id === id);
             if (!project) return;
 
-            const newAmount = prompt(`Установить текущую сумму для "${project.title}":`, project.currentAmount);
+            const newAmount = prompt(`Установить текущую сумму для "${project.title}":`, project.current_amount);
             if (newAmount === null) return;
 
             const amount = parseInt(newAmount) || 0;
@@ -478,14 +546,19 @@
                 return;
             }
 
-            project.currentAmount = Math.min(amount, project.goal);
-            project.updatedAt = new Date().toISOString();
+            // Вычисляем разность для API
+            const difference = amount - project.current_amount;
 
-            saveDonationProjects();
-            loadDonationProjectsList();
-            loadDashboard();
-
-            showNotification('Сумма обновлена', 'success');
+            window.LightFoxAPI.updateDonationAmount(id, difference)
+                .then(response => {
+                    showNotification('Сумма обновлена', 'success');
+                    loadDonationProjects();
+                    loadDashboard();
+                })
+                .catch(error => {
+                    console.error('Ошибка установки суммы:', error);
+                    showNotification(error.message || 'Ошибка обновления', 'error');
+                });
         }
 
         function deleteDonationProject(id) {
@@ -493,11 +566,16 @@
             if (!project) return;
 
             if (confirm(`Удалить донат-проект "${project.title}"? Это действие нельзя отменить.`)) {
-                donationProjects = donationProjects.filter(p => p.id !== id);
-                saveDonationProjects();
-                loadDonationProjectsList();
-                loadDashboard();
-                showNotification('Донат-проект удален', 'success');
+                window.LightFoxAPI.deleteDonationProject(id)
+                    .then(response => {
+                        showNotification('Донат-проект удален', 'success');
+                        loadDonationProjects();
+                        loadDashboard();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка удаления проекта:', error);
+                        showNotification(error.message || 'Ошибка удаления', 'error');
+                    });
             }
         }
 
@@ -517,84 +595,93 @@
 
         // Edit manga
         function editManga(id) {
-            const manga = window.MangaAPI.getMangaById(id);
-            if (!manga) return;
+            window.LightFoxAPI.getMangaById(id)
+                .then(manga => {
+                    if (!manga) {
+                        showNotification('Тайтл не найден', 'error');
+                        return;
+                    }
 
-            editingManga = manga;
-            showSection('add-manga');
-            
-            // Fill form with existing data
-            document.getElementById('mangaTitle').value = manga.title || '';
-            document.getElementById('mangaType').value = manga.type || '';
-            document.getElementById('mangaStatus').value = manga.status || '';
-            document.getElementById('mangaYear').value = manga.year || '';
-            document.getElementById('mangaRating').value = manga.rating || '';
-            document.getElementById('donationGoal').value = manga.donationGoal || 10000;
-            document.getElementById('mangaImage').value = manga.image || '';
-            document.getElementById('mangaDescription').value = manga.description || '';
+                    editingManga = manga;
+                    showSection('add-manga');
+                    
+                    // Fill form with existing data
+                    document.getElementById('mangaTitle').value = manga.title || '';
+                    document.getElementById('mangaType').value = manga.type || '';
+                    document.getElementById('mangaStatus').value = manga.status || '';
+                    document.getElementById('mangaYear').value = manga.year || '';
+                    document.getElementById('mangaRating').value = manga.rating || '';
+                    document.getElementById('donationGoal').value = manga.donation_goal || 10000;
+                    document.getElementById('mangaImage').value = manga.image_url || '';
+                    document.getElementById('mangaDescription').value = manga.description || '';
 
-            // Load chapters count
-            document.getElementById('availableChapters').value = manga.availableChapters || 0;
-            document.getElementById('totalChapters').value = manga.totalChapters || 0;
-            updateChaptersPreview();
+                    // Load chapters count
+                    document.getElementById('availableChapters').value = manga.available_chapters || 0;
+                    document.getElementById('totalChapters').value = manga.total_chapters || 0;
+                    updateChaptersPreview();
 
-            // Load genres
-            document.getElementById('genreTags').innerHTML = '';
-            if (manga.genres) {
-                manga.genres.forEach(genre => addTag('genre', genre));
-            }
+                    // Load genres
+                    document.getElementById('genreTags').innerHTML = '';
+                    if (manga.genres) {
+                        manga.genres.forEach(genre => addTag('genre', genre));
+                    }
 
-            // Load categories
-            document.getElementById('categoryTags').innerHTML = '';
-            if (manga.categories) {
-                manga.categories.forEach(category => addTag('category', category));
-            }
+                    // Load categories
+                    document.getElementById('categoryTags').innerHTML = '';
+                    if (manga.categories) {
+                        manga.categories.forEach(category => addTag('category', category));
+                    }
 
-            // Load episodes
-            episodes = [];
-            episodeIdCounter = 1;
-            if (manga.episodes) {
-                Object.keys(manga.episodes).forEach(episodeKey => {
-                    const episode = {
-                        id: episodeIdCounter++,
-                        title: `Серия ${episodeKey}`,
-                        url: manga.episodes[episodeKey],
-                        chapterFrom: episodeKey,
-                        chapterTo: episodeKey,
-                        order: episodes.length
-                    };
-                    episodes.push(episode);
+                    // Load episodes
+                    episodes = [];
+                    episodeIdCounter = 1;
+                    if (manga.episodes) {
+                        Object.keys(manga.episodes).forEach(episodeKey => {
+                            const episode = {
+                                id: episodeIdCounter++,
+                                title: `Серия ${episodeKey}`,
+                                url: manga.episodes[episodeKey],
+                                chapterFrom: episodeKey,
+                                chapterTo: episodeKey,
+                                order: episodes.length
+                            };
+                            episodes.push(episode);
+                        });
+                    }
+
+                    renderEpisodesList();
+                    updateEpisodesSummary();
+                    
+                    document.getElementById('formTitle').textContent = 'Редактировать тайтл';
+                    
+                    // Preview image if exists
+                    if (manga.image_url) {
+                        previewImage(manga.image_url);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки тайтла для редактирования:', error);
+                    showNotification('Ошибка загрузки тайтла', 'error');
                 });
-            }
-
-            renderEpisodesList();
-            updateEpisodesSummary();
-            
-            document.getElementById('formTitle').textContent = 'Редактировать тайтл';
-            
-            // Preview image if exists
-            if (manga.image) {
-                previewImage(manga.image);
-            }
         }
 
         // Delete manga
         function deleteManga(id) {
-            const manga = window.MangaAPI.getMangaById(id);
-            if (!manga) return;
-
-            if (confirm(`Удалить тайтл "${manga.title}"? Это действие нельзя отменить.`)) {
-                window.MangaAPI.deleteManga(id);
-                
-                // Also remove related donation projects
-                donationProjects = donationProjects.filter(p => p.mangaId !== id);
-                saveDonationProjects();
-                
-                loadMangaList();
-                loadDashboard();
-                loadDonationProjectsList();
-                showNotification('Тайтл и связанные проекты удалены', 'success');
+            if (!confirm('Удалить этот тайтл? Это действие нельзя отменить.')) {
+                return;
             }
+
+            window.LightFoxAPI.deleteManga(id)
+                .then(response => {
+                    showNotification('Тайтл удален', 'success');
+                    loadMangaList();
+                    loadDashboard();
+                    loadDonationProjects();
+                })
+                .catch(error => {
+                    console.error('Ошибка удаления тайтла:', error);
+                    showNotification(error.message || 'Ошибка удаления', 'error');
+                });
         }
 
         // Tag management
@@ -814,13 +901,14 @@
             try {
                 // Collect basic data
                 const mangaData = {
+                    id: editingManga ? editingManga.id : undefined,
                     title: document.getElementById('mangaTitle').value.trim(),
                     type: document.getElementById('mangaType').value,
                     status: document.getElementById('mangaStatus').value,
                     year: parseInt(document.getElementById('mangaYear').value) || new Date().getFullYear(),
                     rating: parseFloat(document.getElementById('mangaRating').value) || 8.0,
-                    donationGoal: parseInt(document.getElementById('donationGoal').value) || 10000,
-                    image: document.getElementById('mangaImage').value.trim() || null,
+                    donation_goal: parseInt(document.getElementById('donationGoal').value) || 10000,
+                    image_url: document.getElementById('mangaImage').value.trim() || null,
                     description: document.getElementById('mangaDescription').value.trim() || '',
                     genres: Array.from(document.getElementById('genreTags').querySelectorAll('.tag')).map(tag => 
                         tag.textContent.replace('×', '').trim()
@@ -847,8 +935,8 @@
                 const availableChapters = parseInt(document.getElementById('availableChapters').value) || 0;
                 const totalChapters = parseInt(document.getElementById('totalChapters').value) || 0;
                 
-                mangaData.availableChapters = availableChapters;  // ДЛЯ ТЕКСТА в каталоге/плеере
-                mangaData.totalChapters = totalChapters;          // ДЛЯ ТЕКСТА в каталоге/плеере
+                mangaData.available_chapters = availableChapters;  // ДЛЯ ТЕКСТА в каталоге/плеере
+                mangaData.total_chapters = totalChapters;          // ДЛЯ ТЕКСТА в каталоге/плеере
 
                 // ФУНКЦИОНАЛЬНАЯ СИСТЕМА: Серии для кнопок в плеере
                 mangaData.episodes = {};
@@ -864,9 +952,6 @@
                     mangaData.episodes[episodeKey] = episode.url;
                 });
 
-                // ДЛЯ СОВМЕСТИМОСТИ: Количество серий основано на менеджере серий
-                mangaData.totalEpisodes = Object.keys(mangaData.episodes).length;
-                mangaData.availableEpisodes = Object.keys(mangaData.episodes).length;
 
                 // Save to API
                 saveToAPI(mangaData);
@@ -879,34 +964,34 @@
 
         function saveToAPI(mangaData) {
             try {
-                let result;
-                if (editingManga) {
-                    result = window.MangaAPI.updateManga(editingManga.id, mangaData);
-                    showNotification('Тайтл успешно обновлен!', 'success');
-                } else {
-                    result = window.MangaAPI.addManga(mangaData);
-                    showNotification('Тайтл успешно добавлен!', 'success');
-                }
-
-                if (result) {
-                    console.log('💾 Тайтл сохранен:', result);
-                    console.log('📺 Серии сохранены:', episodes.length);
-                    
-                    // Update dashboard and list
-                    loadDashboard();
-                    loadMangaList();
-                    loadDonationProjectsList();
-                    
-                    // Reset form after successful save
-                    setTimeout(() => {
-                        resetForm();
-                        showSection('manga-list');
-                    }, 1500);
-                }
+                window.LightFoxAPI.saveManga(mangaData)
+                    .then(result => {
+                        if (result) {
+                            console.log('💾 Тайтл сохранен:', result);
+                            console.log('📺 Серии сохранены:', episodes.length);
+                            
+                            showNotification(editingManga ? 'Тайтл успешно обновлен!' : 'Тайтл успешно добавлен!', 'success');
+                            
+                            // Update dashboard and list
+                            loadDashboard();
+                            loadMangaList();
+                            loadDonationProjects();
+                            
+                            // Reset form after successful save
+                            setTimeout(() => {
+                                resetForm();
+                                showSection('manga-list');
+                            }, 1500);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка API:', error);
+                        showNotification(error.message || 'Ошибка сохранения', 'error');
+                    });
 
             } catch (error) {
-                console.error('Ошибка API:', error);
-                showNotification('Ошибка сохранения в базу данных', 'error');
+                console.error('Ошибка сохранения:', error);
+                showNotification(error.message || 'Ошибка сохранения', 'error');
             }
         }
 
@@ -987,37 +1072,27 @@
 
         function logout() {
             if (confirm('Выйти из админ-панели?')) {
-                isAuthenticated = false;
-                document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('adminPanel').style.display = 'none';
-                document.getElementById('passwordInput').value = '';
+                window.LightFoxAPI.logout()
+                    .then(() => {
+                        isAuthenticated = false;
+                        currentUser = null;
+                        document.getElementById('loginScreen').style.display = 'flex';
+                        document.getElementById('adminPanel').style.display = 'none';
+                        document.getElementById('emailInput').value = '';
+                        document.getElementById('passwordInput').value = '';
+                        showNotification('Вы вышли из админки', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Ошибка выхода:', error);
+                        // Выходим принудительно
+                        isAuthenticated = false;
+                        currentUser = null;
+                        document.getElementById('loginScreen').style.display = 'flex';
+                        document.getElementById('adminPanel').style.display = 'none';
+                    });
             }
         }
 
-        // Load data system
-        function loadDataSystem() {
-            return new Promise((resolve, reject) => {
-                if (window.MangaAPI) {
-                    resolve();
-                    return;
-                }
-
-                const script = document.createElement('script');
-                script.src = 'js/data.js';
-                script.onload = () => {
-                    const checkAPI = () => {
-                        if (window.MangaAPI) {
-                            resolve();
-                        } else {
-                            setTimeout(checkAPI, 100);
-                        }
-                    };
-                    checkAPI();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        }
 
         // Utility functions
         function showNotification(message, type = 'success') {
@@ -1033,4 +1108,46 @@
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔥 Админка с управлением донатами загружена!');
+            
+            // Проверяем, авторизован ли пользователь
+            if (window.LightFoxAPI && window.LightFoxAPI.isAuthenticated()) {
+                window.LightFoxAPI.verifyToken()
+                    .then(response => {
+                        if (response.user && response.user.role === 'admin') {
+                            isAuthenticated = true;
+                            currentUser = response.user;
+                            document.getElementById('currentUser').textContent = response.user.username;
+                            document.getElementById('loginScreen').style.display = 'none';
+                            document.getElementById('adminPanel').style.display = 'block';
+                            initializeAdmin();
+                        }
+                    })
+                    .catch(error => {
+                        console.warn('Токен недействителен или нет прав админа');
+                    });
+            }
         });
+
+        // Глобальные функции для onclick
+        window.showSection = showSection;
+        window.editManga = editManga;
+        window.deleteManga = deleteManga;
+        window.addTag = addTag;
+        window.addNewEpisode = addNewEpisode;
+        window.updateEpisodeChapterFrom = updateEpisodeChapterFrom;
+        window.updateEpisodeChapterTo = updateEpisodeChapterTo;
+        window.updateEpisodeTitle = updateEpisodeTitle;
+        window.updateEpisodeUrl = updateEpisodeUrl;
+        window.removeEpisode = removeEpisode;
+        window.sortEpisodes = sortEpisodes;
+        window.resetForm = resetForm;
+        window.previewManga = previewManga;
+        window.previewImage = previewImage;
+        window.logout = logout;
+        window.showAddDonationForm = showAddDonationForm;
+        window.hideDonationForm = hideDonationForm;
+        window.editDonationProject = editDonationProject;
+        window.quickUpdateDonation = quickUpdateDonation;
+        window.setDonationAmount = setDonationAmount;
+        window.deleteDonationProject = deleteDonationProject;
+        window.previewDonationImage = previewDonationImage;

@@ -1,164 +1,11 @@
 
+// Глобальные функции для совместимости
+window.showAuthPopup = showAuthPopup;
+window.hideAuthPopup = hideAuthPopup;
+window.login = () => showAuthPopup('login');
+window.register = () => showAuthPopup('register');
 
 
-// Система авторизации для Light Fox Manga
-(function() {
-    'use strict';
-
-    // Ключи для хранения в памяти (вместо localStorage)
-    let users = [];
-    let currentSession = null;
-
-    class AuthSystem {
-        constructor() {
-            this.users = users;
-            this.currentSession = currentSession;
-        }
-
-        // Проверка авторизации
-        isAuthenticated() {
-            if (!this.currentSession) return false;
-            
-            const user = this.users.find(u => u.id === this.currentSession.user.id);
-            if (!user) {
-                this.logout();
-                return false;
-            }
-            
-            const device = user.devices.find(d => d.id === this.currentSession.deviceId);
-            if (!device) {
-                this.logout();
-                return false;
-            }
-            
-            return true;
-        }
-
-        // Получение текущего пользователя
-        getCurrentUser() {
-            return this.isAuthenticated() ? this.currentSession.user : null;
-        }
-
-        // Регистрация пользователя
-        async register(userData, deviceInfo) {
-            // Проверяем, что email не занят
-            if (this.users.find(u => u.email === userData.email)) {
-                throw new Error('Пользователь с таким email уже существует');
-            }
-
-            // Создаем нового пользователя
-            const newUser = {
-                id: this.generateUserId(),
-                username: userData.username,
-                email: userData.email,
-                password: btoa(userData.password), // Простое кодирование
-                registeredAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString(),
-                devices: [{
-                    id: this.generateDeviceId(),
-                    ...deviceInfo,
-                    registrationDevice: true,
-                    addedAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                }],
-                subscription: null,
-                settings: {
-                    theme: 'light',
-                    language: 'ru',
-                    notifications: true
-                },
-                favorites: [],
-                watching: [],
-                wantToWatch: [],
-                completed: [],
-                watchingProgress: {},
-                donationHistory: []
-            };
-
-            // Сохраняем пользователя
-            this.users.push(newUser);
-
-            // Создаем сессию
-            this.createSession(newUser, newUser.devices[0].id);
-
-            return newUser;
-        }
-
-        // Вход в систему
-        async login(email, password, deviceInfo, rememberMe = false) {
-            const user = this.users.find(u => u.email === email && u.password === btoa(password));
-            if (!user) {
-                throw new Error('Неверный email или пароль');
-            }
-
-            const currentDeviceId = this.generateDeviceId();
-            const existingDevice = user.devices.find(d => d.id === currentDeviceId);
-            
-            if (!existingDevice && user.devices.length >= 3) {
-                throw new Error('Достигнут лимит устройств (максимум 3). Отвяжите одно из устройств в настройках.');
-            }
-
-            if (!existingDevice) {
-                user.devices.push({
-                    id: currentDeviceId,
-                    ...deviceInfo,
-                    addedAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                });
-            } else {
-                existingDevice.lastLogin = new Date().toISOString();
-            }
-
-            user.lastLogin = new Date().toISOString();
-            this.createSession(user, currentDeviceId, rememberMe);
-
-            return user;
-        }
-
-        // Создание сессии
-        createSession(user, deviceId, rememberMe = false) {
-            this.currentSession = {
-                user: user,
-                deviceId: deviceId,
-                loginTime: new Date().toISOString(),
-                rememberMe: rememberMe
-            };
-            currentSession = this.currentSession;
-        }
-
-        // Выход из системы
-        logout() {
-            this.currentSession = null;
-            currentSession = null;
-        }
-
-        // Утилиты
-        generateUserId() {
-            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        generateDeviceId() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillText('Device fingerprint', 2, 2);
-            
-            return 'device_' + btoa(
-                navigator.userAgent + 
-                (canvas.toDataURL ? canvas.toDataURL() : '') + 
-                screen.width + 
-                screen.height + 
-                new Date().getTimezoneOffset()
-            ).replace(/[^a-zA-Z0-9]/g, '').substr(0, 16);
-        }
-    }
-
-    // Создаем глобальный экземпляр
-    window.AuthSystem = new AuthSystem();
-    console.log('🔐 Light Fox Manga Auth System загружена');
-
-})();
 // Global state
         let isDark = false;
         let currentForm = 'login';
@@ -181,8 +28,27 @@
             if (action === 'register') {
                 switchToRegister();
             }
+            
+            // Проверяем, авторизован ли пользователь
+            checkAuthStatus();
         });
 
+        // Проверка статуса авторизации
+        async function checkAuthStatus() {
+            if (window.LightFoxAPI && window.LightFoxAPI.isAuthenticated()) {
+                try {
+                    const user = await window.LightFoxAPI.verifyToken();
+                    if (user) {
+                        // Пользователь авторизован, перенаправляем
+                        const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+                        window.location.href = redirectUrl;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('Токен недействителен:', error.message);
+                }
+            }
+        }
         // Device detection
         function detectDeviceInfo() {
             const userAgent = navigator.userAgent;
@@ -375,9 +241,18 @@
             document.getElementById('loginLoading').classList.add('show');
             
             try {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+                // Используем реальный API
+                const response = await window.LightFoxAPI.login({
+                    email,
+                    password,
+                    rememberMe
+                });
                 
-                const user = await window.AuthSystem.login(email, password, deviceInfo, rememberMe);
+                if (response.user) {
+                    // Сохраняем данные пользователя
+                    localStorage.setItem('currentUser', JSON.stringify(response.user));
+                    localStorage.setItem('isLoggedIn', 'true');
+                }
                 
                 // Show success animation
                 showSuccessAnimation();
@@ -389,7 +264,8 @@
                 }, 2000);
                 
             } catch (error) {
-                showError('loginPassword', error.message);
+                console.error('Ошибка входа:', error);
+                showError('loginPassword', error.message || 'Ошибка входа в систему');
             } finally {
                 document.getElementById('loginBtn').disabled = false;
                 document.getElementById('loginLoading').classList.remove('show');
@@ -454,10 +330,18 @@
             document.getElementById('registerLoading').classList.add('show');
             
             try {
-                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+                // Используем реальный API
+                const response = await window.LightFoxAPI.register({
+                    username,
+                    email,
+                    password
+                });
                 
-                const userData = { username, email, password };
-                const user = await window.AuthSystem.register(userData, deviceInfo);
+                if (response.user) {
+                    // Сохраняем данные пользователя
+                    localStorage.setItem('currentUser', JSON.stringify(response.user));
+                    localStorage.setItem('isLoggedIn', 'true');
+                }
                 
                 // Show success animation
                 showSuccessAnimation();
@@ -469,10 +353,13 @@
                 }, 2000);
                 
             } catch (error) {
+                console.error('Ошибка регистрации:', error);
                 if (error.message.includes('email')) {
                     showError('registerEmail', error.message);
+                } else if (error.message.includes('имя') || error.message.includes('username')) {
+                    showError('registerUsername', error.message);
                 } else {
-                    alert('Ошибка регистрации: ' + error.message);
+                    showError('registerPassword', error.message || 'Ошибка регистрации');
                 }
             } finally {
                 document.getElementById('registerBtn').disabled = false;
@@ -502,41 +389,6 @@
             alert('Функция восстановления пароля будет реализована позже. Обратитесь в поддержку.');
         }
 
-        // Demo users for testing
-        setTimeout(() => {
-            // Add demo user
-            const demoUser = {
-                id: 'demo_user_123',
-                username: 'DemoUser',
-                email: 'demo@example.com',
-                password: btoa('123456'),
-                registeredAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString(),
-                devices: [{
-                    id: 'demo_device_123',
-                    type: 'Desktop',
-                    browser: 'Chrome',
-                    registrationDevice: true,
-                    addedAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                }],
-                subscription: null,
-                settings: {
-                    theme: 'light',
-                    language: 'ru',
-                    notifications: true
-                },
-                favorites: [],
-                watching: [],
-                wantToWatch: [],
-                completed: [],
-                watchingProgress: {},
-                donationHistory: []
-            };
-            
-            window.AuthSystem.users.push(demoUser);
-            console.log('💡 Демо пользователь добавлен: demo@example.com / 123456');
-        }, 100);
 
 // ========================================
 // POPUP ФУНКЦИИ (заменить строки 752-768)
@@ -862,8 +714,16 @@ async function handlePopupLogin(e) {
     document.getElementById('popupLoginLoading').classList.add('show');
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const user = await window.AuthSystem.login(email, password, deviceInfo, rememberMe);
+        const response = await window.LightFoxAPI.login({
+            email,
+            password,
+            rememberMe
+        });
+        
+        if (response.user) {
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('isLoggedIn', 'true');
+        }
         
         showPopupSuccessAnimation();
         
@@ -874,7 +734,8 @@ async function handlePopupLogin(e) {
         }, 2000);
         
     } catch (error) {
-        showPopupError('popupLoginPassword', error.message);
+        console.error('Ошибка входа:', error);
+        showPopupError('popupLoginPassword', error.message || 'Ошибка входа в систему');
     } finally {
         document.getElementById('popupLoginBtn').disabled = false;
         document.getElementById('popupLoginLoading').classList.remove('show');
@@ -937,9 +798,16 @@ async function handlePopupRegister(e) {
     document.getElementById('popupRegisterLoading').classList.add('show');
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const userData = { username, email, password };
-        const user = await window.AuthSystem.register(userData, deviceInfo);
+        const response = await window.LightFoxAPI.register({
+            username,
+            email,
+            password
+        });
+        
+        if (response.user) {
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('isLoggedIn', 'true');
+        }
         
         showPopupSuccessAnimation();
         
@@ -949,10 +817,13 @@ async function handlePopupRegister(e) {
         }, 2000);
         
     } catch (error) {
+        console.error('Ошибка регистрации:', error);
         if (error.message.includes('email')) {
             showPopupError('popupRegisterEmail', error.message);
+        } else if (error.message.includes('имя') || error.message.includes('username')) {
+            showPopupError('popupRegisterUsername', error.message);
         } else {
-            alert('Ошибка регистрации: ' + error.message);
+            showPopupError('popupRegisterPassword', error.message || 'Ошибка регистрации');
         }
     } finally {
         document.getElementById('popupRegisterBtn').disabled = false;
@@ -1024,5 +895,13 @@ function showAuthPopup(mode = 'login') {
         switchToPopupRegister();
     } else {
         switchToPopupLogin();
+    }
+}
+
+function hideAuthPopup() {
+    const authPopup = document.getElementById('authPopup');
+    if (authPopup) {
+        authPopup.style.display = 'none';
+        document.body.style.overflow = '';
     }
 }

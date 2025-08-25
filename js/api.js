@@ -1,8 +1,9 @@
 // API клиент для Light Fox Manga
 class LightFoxAPI {
     constructor() {
-        this.baseURL = window.location.origin + '/api';
+        this.baseURL = (window.location.origin || 'http://localhost:3000') + '/api';
         this.token = localStorage.getItem('auth_token');
+        this.refreshPromise = null;
     }
 
     // Установка токена
@@ -18,7 +19,8 @@ class LightFoxAPI {
     // Получение заголовков для запросов
     getHeaders() {
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         };
 
         if (this.token) {
@@ -39,6 +41,13 @@ class LightFoxAPI {
         try {
             const response = await fetch(url, config);
             const data = await response.json();
+            // Проверяем статус ответа
+            if (response.status === 401) {
+                // Токен истек или недействителен
+                this.setToken(null);
+                throw new Error('Сессия истекла. Войдите в систему заново.');
+            }
+            
 
             if (!response.ok) {
                 throw new Error(data.error || `HTTP ${response.status}`);
@@ -46,7 +55,13 @@ class LightFoxAPI {
 
             return data;
         } catch (error) {
-            console.error(`API Error (${endpoint}):`, error);
+            console.error(`🚨 API Error (${endpoint}):`, error.message);
+            
+            // Если ошибка сети, показываем более понятное сообщение
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+            }
+            
             throw error;
         }
     }
@@ -54,6 +69,19 @@ class LightFoxAPI {
     // === АУТЕНТИФИКАЦИЯ ===
 
     async register(userData) {
+        // Валидация на клиенте
+        if (!userData.username || userData.username.length < 2) {
+            throw new Error('Имя пользователя должно содержать минимум 2 символа');
+        }
+        
+        if (!userData.email || !this.isValidEmail(userData.email)) {
+            throw new Error('Введите корректный email');
+        }
+        
+        if (!userData.password || userData.password.length < 6) {
+            throw new Error('Пароль должен содержать минимум 6 символов');
+        }
+        
         const response = await this.request('/auth/register', {
             method: 'POST',
             body: JSON.stringify(userData)
@@ -67,6 +95,15 @@ class LightFoxAPI {
     }
 
     async login(credentials) {
+        // Валидация на клиенте
+        if (!credentials.email || !this.isValidEmail(credentials.email)) {
+            throw new Error('Введите корректный email');
+        }
+        
+        if (!credentials.password) {
+            throw new Error('Введите пароль');
+        }
+        
         const response = await this.request('/auth/login', {
             method: 'POST',
             body: JSON.stringify(credentials)
@@ -119,6 +156,9 @@ class LightFoxAPI {
     }
 
     async getMangaById(id) {
+        if (!id) {
+            throw new Error('ID манги не указан');
+        }
         return await this.request(`/manga/${id}`);
     }
 
@@ -145,6 +185,19 @@ class LightFoxAPI {
     // === АДМИНКА ===
 
     async saveManga(mangaData) {
+        // Валидация обязательных полей
+        if (!mangaData.title || !mangaData.title.trim()) {
+            throw new Error('Название тайтла обязательно');
+        }
+        
+        if (!mangaData.type) {
+            throw new Error('Тип тайтла обязателен');
+        }
+        
+        if (!mangaData.status) {
+            throw new Error('Статус тайтла обязателен');
+        }
+        
         return await this.request('/admin/manga', {
             method: 'POST',
             body: JSON.stringify(mangaData)
@@ -152,6 +205,14 @@ class LightFoxAPI {
     }
 
     async deleteManga(id) {
+        if (!id) {
+            throw new Error('ID манги не указан');
+        }
+        
+        if (!confirm('Вы уверены, что хотите удалить этот тайтл?')) {
+            throw new Error('Удаление отменено');
+        }
+        
         return await this.request(`/admin/manga/${id}`, {
             method: 'DELETE'
         });
@@ -168,6 +229,19 @@ class LightFoxAPI {
     }
 
     async saveDonationProject(projectData) {
+        // Валидация
+        if (!projectData.manga_id) {
+            throw new Error('Выберите тайтл для проекта');
+        }
+        
+        if (!projectData.title || !projectData.title.trim()) {
+            throw new Error('Название проекта обязательно');
+        }
+        
+        if (!projectData.goal_amount || projectData.goal_amount < 1000) {
+            throw new Error('Цель доната должна быть не менее 1000₽');
+        }
+        
         return await this.request('/admin/donation-projects', {
             method: 'POST',
             body: JSON.stringify(projectData)
@@ -175,12 +249,24 @@ class LightFoxAPI {
     }
 
     async deleteDonationProject(id) {
+        if (!id) {
+            throw new Error('ID проекта не указан');
+        }
+        
         return await this.request(`/admin/donation-projects/${id}`, {
             method: 'DELETE'
         });
     }
 
     async updateDonationAmount(projectId, amount) {
+        if (!projectId) {
+            throw new Error('ID проекта не указан');
+        }
+        
+        if (!amount || amount < 0) {
+            throw new Error('Сумма должна быть положительной');
+        }
+        
         return await this.request(`/admin/donation-projects/${projectId}/amount`, {
             method: 'PATCH',
             body: JSON.stringify({ amount })
@@ -190,6 +276,19 @@ class LightFoxAPI {
     // === ДОНАТЫ ===
 
     async makeDonation(donationData) {
+        // Валидация
+        if (!donationData.amount || donationData.amount < 10) {
+            throw new Error('Минимальная сумма доната: 10₽');
+        }
+        
+        if (donationData.amount > 50000) {
+            throw new Error('Максимальная сумма доната: 50,000₽');
+        }
+        
+        if (!donationData.project_id && !donationData.manga_id) {
+            throw new Error('Укажите проект или мангу для доната');
+        }
+        
         return await this.request('/donations/donate', {
             method: 'POST',
             body: JSON.stringify(donationData)
@@ -211,6 +310,14 @@ class LightFoxAPI {
     }
 
     async addToList(mangaId, listType, currentEpisode = 1) {
+        if (!mangaId) {
+            throw new Error('ID манги не указан');
+        }
+        
+        if (!['favorites', 'watching', 'wantToWatch', 'completed'].includes(listType)) {
+            throw new Error('Неверный тип списка');
+        }
+        
         return await this.request('/users/lists', {
             method: 'POST',
             body: JSON.stringify({
@@ -222,12 +329,20 @@ class LightFoxAPI {
     }
 
     async removeFromList(mangaId, listType) {
+        if (!mangaId || !listType) {
+            throw new Error('Не указаны обязательные параметры');
+        }
+        
         return await this.request(`/users/lists/${mangaId}/${listType}`, {
             method: 'DELETE'
         });
     }
 
     async updateProgress(mangaId, episodeNumber, progressSeconds = 0, completed = false) {
+        if (!mangaId || !episodeNumber) {
+            throw new Error('Не указаны обязательные параметры');
+        }
+        
         return await this.request('/users/progress', {
             method: 'POST',
             body: JSON.stringify({
@@ -240,6 +355,10 @@ class LightFoxAPI {
     }
 
     async getProgress(mangaId) {
+        if (!mangaId) {
+            throw new Error('ID манги не указан');
+        }
+        
         return await this.request(`/users/progress/${mangaId}`);
     }
 
@@ -261,6 +380,18 @@ class LightFoxAPI {
         return !!this.token;
     }
 
+    // Валидация email
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    // Очистка HTML для безопасности
+    sanitizeHtml(html) {
+        const div = document.createElement('div');
+        div.textContent = html;
+        return div.innerHTML;
+    }
     // Фильтрация манги (клиентская сторона для совместимости)
     filterManga(manga, filters = {}) {
         let result = [...manga];
@@ -268,7 +399,7 @@ class LightFoxAPI {
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
             result = result.filter(item => 
-                item.title.toLowerCase().includes(searchTerm)
+                item.title && item.title.toLowerCase().includes(searchTerm)
             );
         }
 
@@ -298,13 +429,13 @@ class LightFoxAPI {
         if (filters.sortBy) {
             switch (filters.sortBy) {
                 case 'alphabet':
-                    result.sort((a, b) => a.title.localeCompare(b.title));
+                    result.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
                     break;
                 case 'rating':
                     result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
                     break;
                 case 'updated':
-                    result.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                    result.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
                     break;
                 case 'popularity':
                 default:
@@ -328,9 +459,10 @@ window.LightFoxAPI = new LightFoxAPI();
 window.MangaAPI = {
     getAllManga: async () => {
         try {
-            return await window.LightFoxAPI.getAllManga();
+            return await window.LightFoxAPI.getAllManga(filters);
         } catch (error) {
             console.error('Ошибка получения манги:', error);
+            // Возвращаем пустой массив вместо падения
             return [];
         }
     },
@@ -380,10 +512,9 @@ window.MangaAPI = {
         }
     },
 
-    filterManga: (filters) => {
-        // Эта функция теперь работает на сервере через getAllManga с параметрами
-        console.warn('filterManga deprecated, используйте getAllManga с фильтрами');
-        return [];
+    filterManga: (manga, filters) => {
+        // Для совместимости с существующим кодом
+        return window.LightFoxAPI.filterManga(manga, filters);
     },
 
     addManga: async (mangaData) => {
@@ -424,25 +555,58 @@ window.AuthSystem = {
             const response = await window.LightFoxAPI.verifyToken();
             return response.user;
         } catch (error) {
+            console.warn('Ошибка получения текущего пользователя:', error.message);
             return null;
         }
     },
 
     login: async (email, password, deviceInfo, rememberMe = false) => {
-        return await window.LightFoxAPI.login({
+        const response = await window.LightFoxAPI.login({
             email,
             password,
             rememberMe
         });
+        
+        // Сохраняем информацию о пользователе для совместимости
+        if (response.user) {
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('isLoggedIn', 'true');
+        }
+        
+        return response;
     },
 
     register: async (userData, deviceInfo) => {
-        return await window.LightFoxAPI.register(userData);
+        const response = await window.LightFoxAPI.register(userData);
+        
+        // Сохраняем информацию о пользователе для совместимости
+        if (response.user) {
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+            localStorage.setItem('isLoggedIn', 'true');
+        }
+        
+        return response;
     },
 
     logout: async () => {
         await window.LightFoxAPI.logout();
+        
+        // Очищаем локальные данные
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('isLoggedIn');
     }
 };
 
+// Автоматическая проверка токена при загрузке
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.LightFoxAPI.isAuthenticated()) {
+        try {
+            await window.LightFoxAPI.verifyToken();
+        } catch (error) {
+            console.warn('Токен недействителен, очищаем сессию');
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('isLoggedIn');
+        }
+    }
+});
 console.log('🌐 Light Fox Manga API клиент загружен');

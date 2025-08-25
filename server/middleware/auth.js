@@ -9,9 +9,10 @@ const authenticateToken = (req, res, next) => {
         return res.status(401).json({ error: 'Токен доступа не предоставлен' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', async (err, decoded) => {
         if (err) {
-            return res.status(403).json({ error: 'Недействительный токен' });
+            console.warn(`🚨 Недействительный токен от IP: ${req.ip}`);
+            return res.status(403).json({ error: 'Недействительный или истекший токен' });
         }
 
         try {
@@ -22,8 +23,12 @@ const authenticateToken = (req, res, next) => {
             );
 
             if (!user || !user.is_active) {
+                console.warn(`🚨 Попытка доступа заблокированного пользователя ID: ${decoded.userId}, IP: ${req.ip}`);
                 return res.status(403).json({ error: 'Пользователь не найден или заблокирован' });
             }
+
+            // Обновляем время последней активности
+            await req.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
             req.user = user;
             next();
@@ -37,6 +42,7 @@ const authenticateToken = (req, res, next) => {
 // Middleware для проверки роли администратора
 const requireAdmin = (req, res, next) => {
     if (!req.user || req.user.role !== 'admin') {
+        console.warn(`🚨 Попытка доступа к админке без прав: пользователь ${req.user?.id || 'неизвестен'}, IP: ${req.ip}`);
         return res.status(403).json({ error: 'Требуются права администратора' });
     }
     next();
@@ -52,7 +58,7 @@ const optionalAuth = (req, res, next) => {
         return next();
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', async (err, decoded) => {
         if (err) {
             req.user = null;
             return next();
@@ -73,8 +79,40 @@ const optionalAuth = (req, res, next) => {
     });
 };
 
+// Middleware для проверки владельца ресурса
+const requireOwnership = (resourceType) => {
+    return async (req, res, next) => {
+        try {
+            const resourceId = req.params.id;
+            let resource;
+
+            switch (resourceType) {
+                case 'manga':
+                    resource = await req.db.get('SELECT created_by FROM manga WHERE id = ?', [resourceId]);
+                    break;
+                case 'donation_project':
+                    resource = await req.db.get('SELECT created_by FROM donation_projects WHERE id = ?', [resourceId]);
+                    break;
+            if (!resource) {
+                return res.status(404).json({ error: 'Ресурс не найден' });
+            }
+                default:
+            // Админы могут редактировать всё, обычные пользователи - только свои ресурсы
+            if (req.user.role !== 'admin' && resource.created_by !== req.user.id) {
+                return res.status(403).json({ error: 'Недостаточно прав для редактирования' });
+            }
+                    return res.status(400).json({ error: 'Неизвестный тип ресурса' });
+            next();
+        } catch (error) {
+            console.error('Ошибка проверки владельца:', error);
+            res.status(500).json({ error: 'Ошибка сервера' });
+        }
+    };
+};
+            }
 module.exports = {
     authenticateToken,
     requireAdmin,
-    optionalAuth
+    optionalAuth,
+    requireOwnership
 };

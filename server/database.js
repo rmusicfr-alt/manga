@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 class Database {
     constructor() {
@@ -217,15 +218,19 @@ class Database {
     }
 
     async createDefaultAdmin() {
-        const adminExists = await this.get('SELECT id FROM users WHERE role = "admin" LIMIT 1');
+        try {
+            const adminExists = await this.get('SELECT id FROM users WHERE role = "admin" LIMIT 1');
         
-        if (!adminExists) {
-            const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 12);
-            await this.run(
-                'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-                ['admin', 'admin@lightfox.manga', hashedPassword, 'admin']
-            );
-            console.log('✅ Админ создан: admin@lightfox.manga / admin123');
+            if (!adminExists) {
+                const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 12);
+                await this.run(
+                    'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
+                    ['admin', process.env.ADMIN_EMAIL || 'admin@lightfox.manga', hashedPassword, 'admin']
+                );
+                console.log(`✅ Админ создан: ${process.env.ADMIN_EMAIL || 'admin@lightfox.manga'} / ${process.env.ADMIN_PASSWORD || 'admin123'}`);
+            }
+        } catch (error) {
+            console.error('Ошибка создания админа:', error);
         }
     }
 
