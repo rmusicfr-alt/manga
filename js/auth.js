@@ -2,462 +2,164 @@
 (function() {
     'use strict';
 
-    // Ключи для хранения данных
-    const STORAGE_KEYS = {
-        users: 'lightfox_users',
-        sessions: 'lightfox_sessions',
-        currentSession: 'lightfox_current_session'
-    };
-
-    class AuthSystem {
-        constructor() {
-            this.users = this.loadUsers();
-            this.sessions = this.loadSessions();
-            this.currentSession = this.loadCurrentSession();
-            this.initializeDemoUser();
-        }
-
-        // Загрузка пользователей
-        loadUsers() {
-            try {
-                return JSON.parse(localStorage.getItem(STORAGE_KEYS.users) || '[]');
-            } catch (e) {
-                return [];
-            }
-        }
-
-        // Сохранение пользователей
-        saveUsers() {
-            localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(this.users));
-            
-            // Уведомляем админку об обновлении
-            window.dispatchEvent(new CustomEvent('usersUpdated', {
-                detail: { users: this.users }
-            }));
-        }
-
-        // Загрузка сессий
-        loadSessions() {
-            try {
-                return JSON.parse(localStorage.getItem(STORAGE_KEYS.sessions) || '[]');
-            } catch (e) {
-                return [];
-            }
-        }
-
-        // Сохранение сессий
-        saveSessions() {
-            localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify(this.sessions));
-        }
-
-        // Загрузка текущей сессии
-        loadCurrentSession() {
-            try {
-                return JSON.parse(localStorage.getItem(STORAGE_KEYS.currentSession) || 'null');
-            } catch (e) {
-                return null;
-            }
-        }
-
-        // Сохранение текущей сессии
-        saveCurrentSession() {
-            localStorage.setItem(STORAGE_KEYS.currentSession, JSON.stringify(this.currentSession));
-        }
-
-        // Проверка авторизации
-        isAuthenticated() {
-            if (!this.currentSession) return false;
-            
-            const user = this.users.find(u => u.id === this.currentSession.userId);
-            if (!user) {
-                this.logout();
-                return false;
-            }
-            
-            const device = user.devices.find(d => d.id === this.currentSession.deviceId);
-            if (!device) {
-                this.logout();
-                return false;
-            }
-            
-            return true;
-        }
-
-        // Получение текущего пользователя
-        getCurrentUser() {
-            if (!this.isAuthenticated()) return null;
-            return this.users.find(u => u.id === this.currentSession.userId);
-        }
-
-        // Генерация уникального ID устройства
-        generateDeviceId() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillText('Device fingerprint', 2, 2);
-            
-            const fingerprint = [
-                navigator.userAgent,
-                navigator.language,
-                screen.width + 'x' + screen.height,
-                new Date().getTimezoneOffset(),
-                canvas.toDataURL ? canvas.toDataURL() : ''
-            ].join('|');
-            
-            return 'device_' + btoa(fingerprint).replace(/[^a-zA-Z0-9]/g, '').substr(0, 16);
-        }
-
-        // Получение информации об устройстве
-        getDeviceInfo() {
-            const userAgent = navigator.userAgent;
-            let deviceType = 'Desktop';
-            let browser = 'Unknown';
-            
-            // Определение типа устройства
-            if (/Mobi|Android/i.test(userAgent)) {
-                deviceType = 'Mobile';
-            } else if (/Tablet|iPad/i.test(userAgent)) {
-                deviceType = 'Tablet';
-            }
-            
-            // Определение браузера
-            if (userAgent.indexOf('Chrome') > -1) {
-                browser = 'Chrome';
-            } else if (userAgent.indexOf('Firefox') > -1) {
-                browser = 'Firefox';
-            } else if (userAgent.indexOf('Safari') > -1) {
-                browser = 'Safari';
-            } else if (userAgent.indexOf('Edge') > -1) {
-                browser = 'Edge';
-            }
-            
-            return {
-                id: this.generateDeviceId(),
-                type: deviceType,
-                browser: browser,
-                userAgent: userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                screen: `${screen.width}x${screen.height}`,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-            };
-        }
-
-        // Регистрация пользователя
-        async register(userData, deviceInfo, rememberMe = false) {
-            // Проверяем, что email не занят
-            if (this.users.find(u => u.email === userData.email)) {
-                throw new Error('Пользователь с таким email уже существует');
-            }
-
-            const currentDeviceInfo = deviceInfo || this.getDeviceInfo();
-
-            // Создаем нового пользователя
-            const newUser = {
-                id: this.generateUserId(),
-                username: userData.username,
-                email: userData.email,
-                password: btoa(userData.password), // Простое кодирование для демо
-                registeredAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString(),
-                devices: [{
-                    ...currentDeviceInfo,
-                    registrationDevice: true,
-                    addedAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                }],
-                subscription: null,
-                settings: {
-                    theme: 'light',
-                    language: 'ru',
-                    notifications: true,
-                    emailNotifications: false
-                },
-                profile: {
-                    avatar: null,
-                    bio: '',
-                    displayName: userData.username
-                },
-                stats: {
-                    totalWatched: 0,
-                    totalRatings: 0,
-                    totalComments: 0,
-                    totalDonations: 0,
-                    loginCount: 1
-                },
-                lists: {
-                    favorites: [],
-                    watching: [],
-                    wantToWatch: [],
-                    completed: []
-                },
-                donationHistory: [],
-                isActive: true
-            };
-
-            // Сохраняем пользователя
-            this.users.push(newUser);
-            this.saveUsers();
-
-            // Создаем сессию
-            this.createSession(newUser, currentDeviceInfo.id, rememberMe);
-
-            // Обновляем совместимость со старой системой
-            this.updateLegacyStorage(newUser);
-
-            return newUser;
-        }
-
-        // Вход в систему
-        async login(email, password, deviceInfo, rememberMe = false) {
-            const user = this.users.find(u => u.email === email && u.password === btoa(password));
-            if (!user) {
-                throw new Error('Неверный email или пароль');
-            }
-
-            if (!user.isActive) {
-                throw new Error('Аккаунт заблокирован. Обратитесь в поддержку.');
-            }
-
-            const currentDeviceInfo = deviceInfo || this.getDeviceInfo();
-            const existingDevice = user.devices.find(d => d.id === currentDeviceInfo.id);
-            
-            // Проверяем лимит устройств (максимум 3)
-            if (!existingDevice && user.devices.length >= 3) {
-                throw new Error('Достигнут лимит устройств (максимум 3). Отвяжите одно из устройств в настройках или обратитесь в поддержку.');
-            }
-
-            // Добавляем новое устройство или обновляем существующее
-            if (!existingDevice) {
-                user.devices.push({
-                    ...currentDeviceInfo,
-                    addedAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                });
-            } else {
-                existingDevice.lastLogin = new Date().toISOString();
-            }
-
-            // Обновляем статистику пользователя
-            user.lastLogin = new Date().toISOString();
-            user.stats.loginCount = (user.stats.loginCount || 0) + 1;
-            
-            this.saveUsers();
-            this.createSession(user, currentDeviceInfo.id, rememberMe);
-
-            // Обновляем совместимость со старой системой
-            this.updateLegacyStorage(user);
-
-            return user;
-        }
-
-        // Создание сессии
-        createSession(user, deviceId, rememberMe = false) {
-            this.currentSession = {
-                userId: user.id,
-                deviceId: deviceId,
-                loginTime: new Date().toISOString(),
-                rememberMe: rememberMe,
-                expiresAt: rememberMe ? 
-                    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : // 30 дней
-                    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 1 день
-            };
-            
-            this.saveCurrentSession();
-            
-            // Добавляем в список активных сессий
-            this.sessions.push({
-                ...this.currentSession,
-                id: Date.now().toString()
-            });
-            this.saveSessions();
-        }
-
-        // Выход из системы
-        logout() {
-            if (this.currentSession) {
-                // Удаляем из активных сессий
-                this.sessions = this.sessions.filter(s => 
-                    !(s.userId === this.currentSession.userId && s.deviceId === this.currentSession.deviceId)
-                );
-                this.saveSessions();
-            }
-            
-            this.currentSession = null;
-            localStorage.removeItem(STORAGE_KEYS.currentSession);
-            
-            // Очищаем совместимость со старой системой
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('currentUser');
-        }
-
-        // Обновление совместимости со старой системой
-        updateLegacyStorage(user) {
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('currentUser', JSON.stringify({
-                id: user.id,
-                name: user.username,
-                username: user.username,
-                email: user.email
-            }));
-        }
-
-        // Получение всех пользователей (для админки)
-        getAllUsers() {
-            return this.users.map(user => ({
-                ...user,
-                password: undefined, // Не показываем пароли в админке
-                devicesCount: user.devices.length,
-                lastDevice: user.devices[user.devices.length - 1]
-            }));
-        }
-
-        // Блокировка/разблокировка пользователя
-        toggleUserStatus(userId) {
-            const user = this.users.find(u => u.id === userId);
-            if (user) {
-                user.isActive = !user.isActive;
-                this.saveUsers();
-                
-                // Если заблокировали текущего пользователя
-                if (!user.isActive && this.currentSession?.userId === userId) {
-                    this.logout();
-                }
-                
-                return user;
-            }
-            return null;
-        }
-
-        // Отвязка устройства
-        removeUserDevice(userId, deviceId) {
-            const user = this.users.find(u => u.id === userId);
-            if (user) {
-                user.devices = user.devices.filter(d => d.id !== deviceId);
-                this.saveUsers();
-                
-                // Если отвязали текущее устройство
-                if (this.currentSession?.userId === userId && this.currentSession?.deviceId === deviceId) {
-                    this.logout();
-                }
-                
-                return user;
-            }
-            return null;
-        }
-
-        // Генерация ID пользователя
-        generateUserId() {
-            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Инициализация демо-пользователя
-        initializeDemoUser() {
-            if (this.users.length === 0) {
-                const demoUser = {
-                    id: 'demo_user_123',
-                    username: 'DemoUser',
-                    email: 'demo@example.com',
-                    password: btoa('123456'),
-                    registeredAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString(),
-                    devices: [{
-                        id: 'demo_device_123',
-                        type: 'Desktop',
-                        browser: 'Chrome',
-                        platform: 'Win32',
-                        language: 'ru',
-                        screen: '1920x1080',
-                        timezone: 'Europe/Moscow',
-                        registrationDevice: true,
-                        addedAt: new Date().toISOString(),
-                        lastLogin: new Date().toISOString()
-                    }],
-                    subscription: null,
-                    settings: {
-                        theme: 'light',
-                        language: 'ru',
-                        notifications: true,
-                        emailNotifications: false
-                    },
-                    profile: {
-                        avatar: null,
-                        bio: 'Демо-пользователь для тестирования',
-                        displayName: 'DemoUser'
-                    },
-                    stats: {
-                        totalWatched: 5,
-                        totalRatings: 3,
-                        totalComments: 2,
-                        totalDonations: 1500,
-                        loginCount: 10
-                    },
-                    lists: {
-                        favorites: [],
-                        watching: [],
-                        wantToWatch: [],
-                        completed: []
-                    },
-                    donationHistory: [
-                        {
-                            mangaId: '1',
-                            mangaTitle: 'Атака титанов',
-                            amount: 500,
-                            timestamp: new Date(Date.now() - 86400000).toISOString()
-                        },
-                        {
-                            mangaId: '2',
-                            mangaTitle: 'Наруто',
-                            amount: 1000,
-                            timestamp: new Date(Date.now() - 172800000).toISOString()
-                        }
-                    ],
-                    isActive: true
-                };
-                
-                this.users.push(demoUser);
-                this.saveUsers();
-                console.log('💡 Демо пользователь создан: demo@example.com / 123456');
-            }
-        }
-
-        // Получение статистики пользователей
-        getUsersStats() {
-            return {
-                totalUsers: this.users.length,
-                activeUsers: this.users.filter(u => u.isActive).length,
-                blockedUsers: this.users.filter(u => !u.isActive).length,
-                totalSessions: this.sessions.length,
-                totalDonations: this.users.reduce((sum, user) => 
-                    sum + user.donationHistory.reduce((userSum, donation) => userSum + donation.amount, 0), 0
-                ),
-                averageDevicesPerUser: this.users.length > 0 ? 
-                    this.users.reduce((sum, user) => sum + user.devices.length, 0) / this.users.length : 0
-            };
-        }
-    }
-
-    // Создаем глобальный экземпляр
-    window.AuthSystem = new AuthSystem();
-
-    // Глобальные функции для продакшена
+    // Глобальные переменные
     let isDark = localStorage.getItem('theme') === 'dark';
     let currentForm = 'login';
 
     // Показ модала авторизации
     function showAuthModal(mode = 'login') {
         const modal = document.getElementById('authModal');
-        if (!modal) return;
-        
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        
-        if (mode === 'register') {
-            switchToRegister();
-        } else {
-            switchToLogin();
+        if (!modal) {
+            // Создаем модал если его нет
+            createAuthModal();
         }
+        
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+            authModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            if (mode === 'register') {
+                switchToRegister();
+            } else {
+                switchToLogin();
+            }
+        }
+    }
+    
+    // Создание модала авторизации
+    function createAuthModal() {
+        const modalHTML = `
+            <div class="modal-overlay" id="authModal" style="display: none;">
+                <div class="auth-container">
+                    <div class="auth-wrapper">
+                        <div class="auth-panel left">
+                            <div class="welcome-content">
+                                <div class="logo-section">
+                                    <span class="logo-icon">🦊</span>
+                                    <div class="logo-text">Light Fox Manga</div>
+                                    <div class="logo-subtitle">Твой мир манги</div>
+                                </div>
+                                
+                                <div class="welcome-message" id="welcomeMessage">
+                                    <h2 class="welcome-title">Добро пожаловать!</h2>
+                                    <p class="welcome-text">Присоединяйтесь к сообществу любителей манги. Тысячи тайтлов, эксклюзивный контент и многое другое ждут вас!</p>
+                                    <button class="switch-btn" onclick="switchToRegister()">Создать аккаунт</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="auth-panel right">
+                            <div class="form-container">
+                                <!-- Login Form -->
+                                <div class="auth-form active" id="loginForm">
+                                    <div class="form-header">
+                                        <h2 class="form-title">Вход в аккаунт</h2>
+                                        <p class="form-subtitle">Введите ваши данные для входа</p>
+                                    </div>
+
+                                    <form id="loginFormElement">
+                                        <div class="form-group">
+                                            <label class="form-label">Электронная почта</label>
+                                            <input type="email" class="form-input" id="loginEmail" placeholder="example@email.com" required>
+                                            <div class="error-message" id="loginEmailError"></div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">Пароль</label>
+                                            <input type="password" class="form-input" id="loginPassword" placeholder="Введите пароль" required>
+                                            <div class="error-message" id="loginPasswordError"></div>
+                                        </div>
+
+                                        <button type="submit" class="auth-btn primary" id="loginBtn">
+                                            Войти
+                                        </button>
+
+                                        <div class="loading" id="loginLoading">
+                                            <div class="loading-spinner"></div>
+                                            Вход в систему...
+                                        </div>
+                                    </form>
+
+                                    <div class="divider">
+                                        <span>или</span>
+                                    </div>
+
+                                    <button class="auth-btn google-btn" onclick="loginWithGoogle()">
+                                        <svg class="google-icon" viewBox="0 0 24 24">
+                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                        </svg>
+                                        Войти через Google
+                                    </button>
+                                </div>
+
+                                <!-- Register Form -->
+                                <div class="auth-form" id="registerForm">
+                                    <div class="form-header">
+                                        <h2 class="form-title">Регистрация</h2>
+                                        <p class="form-subtitle">Создайте аккаунт для доступа ко всему контенту</p>
+                                    </div>
+
+                                    <form id="registerFormElement">
+                                        <div class="form-group">
+                                            <label class="form-label">Имя пользователя</label>
+                                            <input type="text" class="form-input" id="registerUsername" placeholder="Как к вам обращаться?" required>
+                                            <div class="error-message" id="registerUsernameError"></div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">Электронная почта</label>
+                                            <input type="email" class="form-input" id="registerEmail" placeholder="example@email.com" required>
+                                            <div class="error-message" id="registerEmailError"></div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">Пароль</label>
+                                            <input type="password" class="form-input" id="registerPassword" placeholder="Минимум 6 символов" required>
+                                            <div class="error-message" id="registerPasswordError"></div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">Подтвердите пароль</label>
+                                            <input type="password" class="form-input" id="confirmPassword" placeholder="Повторите пароль" required>
+                                            <div class="error-message" id="confirmPasswordError"></div>
+                                        </div>
+
+                                        <button type="submit" class="auth-btn primary" id="registerBtn">
+                                            Создать аккаунт
+                                        </button>
+
+                                        <div class="loading" id="registerLoading">
+                                            <div class="loading-spinner"></div>
+                                            Создание аккаунта...
+                                        </div>
+                                    </form>
+
+                                    <div class="divider">
+                                        <span>или</span>
+                                    </div>
+
+                                    <button class="auth-btn google-btn" onclick="registerWithGoogle()">
+                                        <svg class="google-icon" viewBox="0 0 24 24">
+                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                        </svg>
+                                        Регистрация через Google
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        setupEventListeners();
     }
     
     // Закрытие модала
@@ -510,10 +212,13 @@
     function switchToLogin() {
         currentForm = 'login';
         
-        document.getElementById('loginForm').classList.add('active');
-        document.getElementById('registerForm').classList.remove('active');
-        
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
         const welcomeMessage = document.getElementById('welcomeMessage');
+        
+        if (loginForm) loginForm.classList.add('active');
+        if (registerForm) registerForm.classList.remove('active');
+        
         if (welcomeMessage) {
             welcomeMessage.innerHTML = `
                 <h2 class="welcome-title">Добро пожаловать!</h2>
@@ -526,10 +231,13 @@
     function switchToRegister() {
         currentForm = 'register';
         
-        document.getElementById('registerForm').classList.add('active');
-        document.getElementById('loginForm').classList.remove('active');
-        
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
         const welcomeMessage = document.getElementById('welcomeMessage');
+        
+        if (registerForm) registerForm.classList.add('active');
+        if (loginForm) loginForm.classList.remove('active');
+        
         if (welcomeMessage) {
             welcomeMessage.innerHTML = `
                 <h2 class="welcome-title">Уже есть аккаунт?</h2>
@@ -632,26 +340,51 @@
         if (loginLoading) loginLoading.classList.add('show');
         
         try {
-            const { data, error } = await window.supabase.auth.signInWithPassword({
-                email,
-                password
-            });
+            if (window.supabase && window.supabase.auth.signInWithPassword) {
+                const { data, error } = await window.supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
 
-            if (error) throw error;
-            
-            closeAuthModal();
-            
-            if (typeof window.showNotification === 'function') {
-                window.showNotification('Добро пожаловать!', 'success');
-            }
-            
-            // Обновляем состояние авторизации
-            if (typeof window.updateAuthState === 'function') {
-                setTimeout(window.updateAuthState, 100);
+                if (error) throw error;
+                
+                closeAuthModal();
+                
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Добро пожаловать!', 'success');
+                } else {
+                    alert('Добро пожаловать!');
+                }
+                
+                // Обновляем состояние авторизации
+                if (typeof window.updateAuthState === 'function') {
+                    setTimeout(window.updateAuthState, 100);
+                }
+            } else {
+                // Демо режим
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUser', JSON.stringify({
+                    id: Date.now(),
+                    name: email.split('@')[0],
+                    username: email.split('@')[0],
+                    email: email
+                }));
+                
+                closeAuthModal();
+                
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Добро пожаловать! (Демо режим)', 'success');
+                } else {
+                    alert('Добро пожаловать!');
+                }
+                
+                if (typeof window.updateAuthState === 'function') {
+                    setTimeout(window.updateAuthState, 100);
+                }
             }
             
         } catch (error) {
-            showError('loginPassword', error.message);
+            showError('loginPassword', error.message || 'Ошибка входа');
         } finally {
             if (loginBtn) loginBtn.disabled = false;
             if (loginLoading) loginLoading.classList.remove('show');
@@ -713,27 +446,52 @@
         if (registerLoading) registerLoading.classList.add('show');
         
         try {
-            const { data, error } = await window.supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        username: username
+            if (window.supabase && window.supabase.auth.signUp) {
+                const { data, error } = await window.supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            username: username
+                        }
                     }
-                }
-            });
+                });
 
-            if (error) throw error;
-            
-            closeAuthModal();
-            
-            if (typeof window.showNotification === 'function') {
-                window.showNotification('Аккаунт создан! Добро пожаловать!', 'success');
-            }
-            
-            // Обновляем состояние авторизации
-            if (typeof window.updateAuthState === 'function') {
-                setTimeout(window.updateAuthState, 100);
+                if (error) throw error;
+                
+                closeAuthModal();
+                
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Аккаунт создан! Добро пожаловать!', 'success');
+                } else {
+                    alert('Аккаунт создан!');
+                }
+                
+                // Обновляем состояние авторизации
+                if (typeof window.updateAuthState === 'function') {
+                    setTimeout(window.updateAuthState, 100);
+                }
+            } else {
+                // Демо режим
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUser', JSON.stringify({
+                    id: Date.now(),
+                    name: username,
+                    username: username,
+                    email: email
+                }));
+                
+                closeAuthModal();
+                
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Аккаунт создан! (Демо режим)', 'success');
+                } else {
+                    alert('Аккаунт создан!');
+                }
+                
+                if (typeof window.updateAuthState === 'function') {
+                    setTimeout(window.updateAuthState, 100);
+                }
             }
             
         } catch (error) {
@@ -748,10 +506,51 @@
         }
     }
 
+    // Google Auth
+    async function loginWithGoogle() {
+        try {
+            if (window.supabase && window.supabase.auth.signInWithOAuth) {
+                const { data, error } = await window.supabase.auth.signInWithOAuth({
+                    provider: 'google'
+                });
+
+                if (error) throw error;
+            } else {
+                // Демо режим
+                const email = 'google.user@gmail.com';
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUser', JSON.stringify({
+                    id: Date.now(),
+                    name: 'Google User',
+                    username: 'Google User',
+                    email: email
+                }));
+                
+                closeAuthModal();
+                
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('Вход через Google (Демо)', 'success');
+                }
+                
+                if (typeof window.updateAuthState === 'function') {
+                    setTimeout(window.updateAuthState, 100);
+                }
+            }
+        } catch (error) {
+            console.error('Google login error:', error);
+            if (typeof window.showNotification === 'function') {
+                window.showNotification('Ошибка входа через Google', 'error');
+            }
+        }
+    }
+
+    async function registerWithGoogle() {
+        await loginWithGoogle(); // Тот же процесс
+    }
+
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
         updateTheme();
-        setupEventListeners();
     });
     
     // Export functions globally
@@ -762,6 +561,8 @@
     window.toggleTheme = toggleTheme;
     window.handleLogin = handleLogin;
     window.handleRegister = handleRegister;
+    window.loginWithGoogle = loginWithGoogle;
+    window.registerWithGoogle = registerWithGoogle;
     window.validateEmail = validateEmail;
     window.validatePassword = validatePassword;
     window.showError = showError;
