@@ -170,127 +170,13 @@
         <a href="#" class="menu-item logout-btn" id="logoutBtn" onclick="logout()" style="display: none;">Выйти</a>
     </div>
 
-    <!-- Auth Modal -->
-    <div class="modal-overlay" id="authModal" style="display: none;">
-        <div class="auth-container">
-            <div class="auth-wrapper">
-                <div class="auth-panel left">
-                    <div class="welcome-content">
-                        <div class="logo-section">
-                            <span class="logo-icon">🦊</span>
-                            <div class="logo-text">Light Fox Manga</div>
-                            <div class="logo-subtitle">Твой мир манги</div>
-                        </div>
-                        
-                        <div class="welcome-message" id="welcomeMessage">
-                            <h2 class="welcome-title">Добро пожаловать!</h2>
-                            <p class="welcome-text">Присоединяйтесь к сообществу любителей манги. Тысячи тайтлов, эксклюзивный контент и многое другое ждут вас!</p>
-                            <button class="switch-btn" id="switchToRegister">Создать аккаунт</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="auth-panel right">
-                    <div class="form-container">
-                        <!-- Login Form -->
-                        <div class="auth-form active" id="loginForm">
-                            <div class="form-header">
-                                <h2 class="form-title">Вход в аккаунт</h2>
-                                <p class="form-subtitle">Введите ваши данные для входа</p>
-                            </div>
-
-                            <form id="loginFormElement">
-                                <div class="form-group">
-                                    <label class="form-label">Электронная почта</label>
-                                    <input type="email" class="form-input" id="loginEmail" placeholder="example@email.com" required>
-                                    <div class="error-message" id="loginEmailError"></div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">Пароль</label>
-                                    <input type="password" class="form-input" id="loginPassword" placeholder="Введите пароль" required>
-                                    <div class="error-message" id="loginPasswordError"></div>
-                                </div>
-
-                                <button type="submit" class="auth-btn primary" id="loginBtn">
-                                    Войти
-                                </button>
-
-                                <div class="loading" id="loginLoading">
-                                    <div class="loading-spinner"></div>
-                                    Вход в систему...
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Register Form -->
-                        <div class="auth-form" id="registerForm">
-                            <div class="form-header">
-                                <h2 class="form-title">Регистрация</h2>
-                                <p class="form-subtitle">Создайте аккаунт для доступа ко всему контенту</p>
-                            </div>
-
-                            <form id="registerFormElement">
-                                <div class="form-group">
-                                    <label class="form-label">Имя пользователя</label>
-                                    <input type="text" class="form-input" id="registerUsername" placeholder="Как к вам обращаться?" required>
-                                    <div class="error-message" id="registerUsernameError"></div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">Электронная почта</label>
-                                    <input type="email" class="form-input" id="registerEmail" placeholder="example@email.com" required>
-                                    <div class="error-message" id="registerEmailError"></div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">Пароль</label>
-                                    <input type="password" class="form-input" id="registerPassword" placeholder="Минимум 6 символов" required>
-                                    <div class="error-message" id="registerPasswordError"></div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">Подтвердите пароль</label>
-                                    <input type="password" class="form-input" id="confirmPassword" placeholder="Повторите пароль" required>
-                                    <div class="error-message" id="confirmPasswordError"></div>
-                                </div>
-
-                                <button type="submit" class="auth-btn primary" id="registerBtn">
-                                    Создать аккаунт
-                                </button>
-
-                                <div class="loading" id="registerLoading">
-                                    <div class="loading-spinner"></div>
-                                    Создание аккаунта...
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Scripts -->
-    <script src="js/config.js"></script>
-    <script src="js/supabase-integration.js"></script>
     <script src="js/supabase-init.js"></script>
-    <script src="js/enhanced-auth.js"></script>
-    <script src="js/supabase-client.js"></script>
-    <script src="js/compatibility-layer.js"></script>
-    <script src="js/supabase-manga.js"></script>
-    <script src="js/supabase-auth.js"></script>
-    <script src="js/supabase-comments.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/notifications-system.js"></script>
-    <script src="js/profile-system.js"></script>
-    <script src="js/donor-ranking.js"></script>
-    <script src="js/currency-system.js"></script>
-    <script src="js/rating-system.js"></script>
-    <script src="js/access-control.js"></script>
-    <script src="js/server-optimization.js"></script>
+    <script src="js/theme-system.js"></script>
     <script src="js/language-system.js"></script>
-    <script src="js/payment-system.js"></script>
-    <script src="js/news.js"></script>
+    <script src="js/currency-system.js"></script>
+    <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/news.js"></script>
 </body>
 </html>

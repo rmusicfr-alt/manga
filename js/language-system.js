@@ -1,4 +1,4 @@
-// Система многоязычности для Light Fox Manga
+// Улучшенная система многоязычности
 (function() {
     'use strict';
 
@@ -37,37 +37,6 @@
             'catalog.auth.required': 'Требуется авторизация',
             'catalog.auth.message': 'Войдите в аккаунт для просмотра полного каталога',
             
-            // Плеер
-            'player.episode': 'Серия',
-            'player.of': 'из',
-            'player.unavailable': 'недоступна',
-            'player.select.episode': 'Выбор серии',
-            'player.notifications': 'Уведомления',
-            'player.unsubscribe': 'Отписаться',
-            'player.favorite': 'Избранное',
-            'player.watching': 'Смотрю',
-            'player.want.watch': 'Хочу',
-            'player.completed': 'Досмотрел',
-            'player.stopped': 'Остановился',
-            'player.cabinet': 'В кабинет',
-            'player.support.project': 'Ускорить выход тайтла',
-            'player.donate': 'Поддержать проект',
-            'player.comments': 'Комментарии',
-            'player.add.comment': 'Отправить комментарий',
-            'player.comment.placeholder': 'Поделитесь своими впечатлениями о серии...',
-            
-            // Кабинет
-            'cabinet.title': 'Личный кабинет',
-            'cabinet.subtitle': 'Управляйте своими тайтлами и поддерживайте любимые серии',
-            'cabinet.favorites': 'Избранное',
-            'cabinet.watching': 'Смотрю',
-            'cabinet.want.watch': 'Хочу посмотреть',
-            'cabinet.completed': 'Досмотрел',
-            'cabinet.notifications': 'Уведомления',
-            'cabinet.subscription': 'Подписка',
-            'cabinet.profile': 'Профиль',
-            'cabinet.support.projects': 'Поддержать проекты',
-            
             // Подписки
             'subs.title': 'Премиум подписки',
             'subs.subtitle': 'Откройте безграничный мир манги и аниме!',
@@ -78,6 +47,10 @@
             'subs.popular': 'Популярный',
             'subs.select': 'Выбрать план',
             'subs.free.start': 'Начать бесплатно',
+            'subs.month': 'месяц',
+            'subs.months.3': '3 месяца',
+            'subs.months.6': '6 месяцев',
+            'subs.months.12': '12 месяцев',
             
             // Авторизация
             'auth.welcome': 'Добро пожаловать!',
@@ -141,37 +114,6 @@
             'catalog.auth.required': 'Потрібна авторизація',
             'catalog.auth.message': 'Увійдіть в акаунт для перегляду повного каталогу',
             
-            // Плеер
-            'player.episode': 'Серія',
-            'player.of': 'з',
-            'player.unavailable': 'недоступна',
-            'player.select.episode': 'Вибір серії',
-            'player.notifications': 'Сповіщення',
-            'player.unsubscribe': 'Відписатися',
-            'player.favorite': 'Улюблене',
-            'player.watching': 'Дивлюся',
-            'player.want.watch': 'Хочу',
-            'player.completed': 'Подивився',
-            'player.stopped': 'Зупинився',
-            'player.cabinet': 'В кабінет',
-            'player.support.project': 'Прискорити вихід тайтла',
-            'player.donate': 'Підтримати проект',
-            'player.comments': 'Коментарі',
-            'player.add.comment': 'Відправити коментар',
-            'player.comment.placeholder': 'Поділіться враженнями про серію...',
-            
-            // Кабинет
-            'cabinet.title': 'Особистий кабінет',
-            'cabinet.subtitle': 'Керуйте своїми тайтлами та підтримуйте улюблені серії',
-            'cabinet.favorites': 'Улюблене',
-            'cabinet.watching': 'Дивлюся',
-            'cabinet.want.watch': 'Хочу подивитися',
-            'cabinet.completed': 'Подивився',
-            'cabinet.notifications': 'Сповіщення',
-            'cabinet.subscription': 'Підписка',
-            'cabinet.profile': 'Профіль',
-            'cabinet.support.projects': 'Підтримати проекти',
-            
             // Подписки
             'subs.title': 'Преміум підписки',
             'subs.subtitle': 'Відкрийте безмежний світ манги та аніме!',
@@ -182,6 +124,10 @@
             'subs.popular': 'Популярний',
             'subs.select': 'Вибрати план',
             'subs.free.start': 'Почати безкоштовно',
+            'subs.month': 'місяць',
+            'subs.months.3': '3 місяці',
+            'subs.months.6': '6 місяців',
+            'subs.months.12': '12 місяців',
             
             // Авторизация
             'auth.welcome': 'Ласкаво просимо!',
@@ -245,37 +191,6 @@
             'catalog.auth.required': 'Authorization Required',
             'catalog.auth.message': 'Login to view the full catalog',
             
-            // Player
-            'player.episode': 'Episode',
-            'player.of': 'of',
-            'player.unavailable': 'unavailable',
-            'player.select.episode': 'Select Episode',
-            'player.notifications': 'Notifications',
-            'player.unsubscribe': 'Unsubscribe',
-            'player.favorite': 'Favorite',
-            'player.watching': 'Watching',
-            'player.want.watch': 'Want to Watch',
-            'player.completed': 'Completed',
-            'player.stopped': 'Paused',
-            'player.cabinet': 'To Cabinet',
-            'player.support.project': 'Speed up title release',
-            'player.donate': 'Support Project',
-            'player.comments': 'Comments',
-            'player.add.comment': 'Post Comment',
-            'player.comment.placeholder': 'Share your thoughts about this episode...',
-            
-            // Cabinet
-            'cabinet.title': 'Personal Cabinet',
-            'cabinet.subtitle': 'Manage your titles and support favorite series',
-            'cabinet.favorites': 'Favorites',
-            'cabinet.watching': 'Watching',
-            'cabinet.want.watch': 'Want to Watch',
-            'cabinet.completed': 'Completed',
-            'cabinet.notifications': 'Notifications',
-            'cabinet.subscription': 'Subscription',
-            'cabinet.profile': 'Profile',
-            'cabinet.support.projects': 'Support Projects',
-            
             // Subscriptions
             'subs.title': 'Premium Subscriptions',
             'subs.subtitle': 'Unlock the limitless world of manga and anime!',
@@ -286,6 +201,10 @@
             'subs.popular': 'Popular',
             'subs.select': 'Select Plan',
             'subs.free.start': 'Start Free',
+            'subs.month': 'month',
+            'subs.months.3': '3 months',
+            'subs.months.6': '6 months',
+            'subs.months.12': '12 months',
             
             // Authorization
             'auth.welcome': 'Welcome!',
@@ -321,10 +240,9 @@
         constructor() {
             this.currentLanguage = this.loadLanguage();
             this.translations = TRANSLATIONS;
-            this.initializeSystem();
+            this.initializeLanguage();
         }
 
-        // Загрузка сохраненного языка
         loadLanguage() {
             const saved = localStorage.getItem('language');
             if (saved && this.translations[saved]) {
@@ -337,39 +255,27 @@
             if (browserLang.startsWith('ru')) return 'ru';
             if (browserLang.startsWith('uk')) return 'ua';
             
-            return 'en'; // По умолчанию английский
+            return 'ru'; // По умолчанию русский
         }
 
-        // Инициализация системы
-        initializeSystem() {
-            this.updateLanguage(this.currentLanguage);
+        saveLanguage(lang) {
+            localStorage.setItem('language', lang);
+        }
+
+        initializeLanguage() {
+            this.applyLanguage(this.currentLanguage);
             this.setupLanguageSelectors();
-            console.log(`🌍 Язык установлен: ${this.currentLanguage}`);
-        }
-
-        // Настройка селекторов языка
-        setupLanguageSelectors() {
-            const selectors = document.querySelectorAll('#langSwitch, #mobileLangSwitch');
-            selectors.forEach(selector => {
-                if (selector) {
-                    selector.value = this.currentLanguage;
-                    selector.addEventListener('change', (e) => {
-                        this.updateLanguage(e.target.value);
-                    });
+            
+            // Слушаем изменения в других вкладках
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'language') {
+                    this.currentLanguage = e.newValue || 'ru';
+                    this.applyLanguage(this.currentLanguage);
                 }
             });
         }
 
-        // Обновление языка
-        updateLanguage(lang) {
-            if (!this.translations[lang]) {
-                console.warn(`Язык ${lang} не поддерживается`);
-                return;
-            }
-
-            this.currentLanguage = lang;
-            localStorage.setItem('language', lang);
-            
+        applyLanguage(lang) {
             // Обновляем все селекторы
             const selectors = document.querySelectorAll('#langSwitch, #mobileLangSwitch');
             selectors.forEach(selector => {
@@ -378,14 +284,8 @@
             
             // Переводим страницу
             this.translatePage();
-            
-            // Уведомляем об изменении
-            window.dispatchEvent(new CustomEvent('languageChanged', {
-                detail: { language: lang }
-            }));
         }
 
-        // Перевод страницы
         translatePage() {
             // Переводим элементы с data-translate
             document.querySelectorAll('[data-translate]').forEach(element => {
@@ -400,44 +300,44 @@
                     }
                 }
             });
-
-            // Переводим элементы с data-translate-html (для HTML контента)
-            document.querySelectorAll('[data-translate-html]').forEach(element => {
-                const key = element.getAttribute('data-translate-html');
-                const translation = this.getTranslation(key);
-                
-                if (translation) {
-                    element.innerHTML = translation;
-                }
-            });
         }
 
-        // Получение перевода
         getTranslation(key) {
             const langData = this.translations[this.currentLanguage];
             return langData ? langData[key] : key;
         }
 
-        // Получение текущего языка
-        getCurrentLanguage() {
-            return this.currentLanguage;
+        updateLanguage(lang) {
+            if (!this.translations[lang]) {
+                console.warn(`Язык ${lang} не поддерживается`);
+                return;
+            }
+
+            this.currentLanguage = lang;
+            this.saveLanguage(lang);
+            this.applyLanguage(lang);
         }
 
-        // Добавление нового перевода
-        addTranslation(lang, key, value) {
-            if (!this.translations[lang]) {
-                this.translations[lang] = {};
-            }
-            this.translations[lang][key] = value;
+        setupLanguageSelectors() {
+            const selectors = document.querySelectorAll('#langSwitch, #mobileLangSwitch');
+            selectors.forEach(selector => {
+                if (selector && !selector.hasAttribute('data-lang-listener')) {
+                    selector.addEventListener('change', (e) => {
+                        this.updateLanguage(e.target.value);
+                    });
+                    selector.setAttribute('data-lang-listener', 'true');
+                }
+            });
         }
     }
 
-    // Создаем глобальный экземпляр
+    // Создаем глобальные системы
     window.LanguageSystem = new LanguageSystem();
-
-    // Функция для быстрого перевода
+    
+    // Экспортируем функции для совместимости
+    window.updateLanguage = (lang) => window.LanguageSystem.updateLanguage(lang);
     window.t = (key) => window.LanguageSystem.getTranslation(key);
 
-    console.log('🌍 Система многоязычности загружена');
+    console.log('🌍 Глобальная система языков загружена');
 
 })();

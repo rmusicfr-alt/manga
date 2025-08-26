@@ -1,4 +1,4 @@
-// Продакшен админ панель для Supabase
+// Админ панель с системой подписок для тайтлов
 (function() {
     'use strict';
 
@@ -137,6 +137,8 @@
     // Создание интерфейса админки
     function createAdminInterface() {
         document.body.innerHTML = `
+            <link rel="stylesheet" href="css/admin.css">
+            
             <!-- Admin Header -->
             <header class="admin-header">
                 <div class="admin-logo">🦊 Light Fox Admin</div>
@@ -321,7 +323,7 @@
 
                 <div style="margin-top: 30px;">
                     <h3>🚀 Продакшен режим активен!</h3>
-                    <p>Все функции работают через Supabase. Сайт готов к деплою на Netlify.</p>
+                    <p>Все функции работают через Supabase. Сайт готов к деплою.</p>
                     
                     <div style="margin-top: 20px; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
                         <h4 style="color: #059669; margin-bottom: 10px;">✅ Активные функции:</h4>
@@ -333,6 +335,7 @@
                             <li>🌍 Геоблокировка</li>
                             <li>🔔 Real-time уведомления</li>
                             <li>📰 Система новостей</li>
+                            <li>💎 Система подписок по тайтлам</li>
                         </ul>
                     </div>
                 </div>
@@ -345,42 +348,6 @@
                     <button class="btn btn-primary" onclick="location.reload()">Перезагрузить</button>
                 </div>
             `;
-        }
-    }
-
-    // Загрузка управления мангой
-    async function loadMangaManagement() {
-        const content = document.getElementById('manga-content');
-        if (!content) return;
-
-        try {
-            const { data: manga, error } = await window.supabase
-                .from('manga')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            content.innerHTML = `
-                <div class="manga-list">
-                    ${manga.map(item => `
-                        <div class="manga-item">
-                            <div class="manga-item-header">
-                                <div class="manga-item-title">${item.title}</div>
-                                <div class="manga-item-meta">
-                                    ${item.type} • ${item.status} • ${item.available_episodes}/${item.total_episodes} серий
-                                </div>
-                            </div>
-                            <div class="manga-item-actions">
-                                <button class="btn btn-secondary" onclick="editManga('${item.id}')">Редактировать</button>
-                                <button class="btn btn-danger" onclick="deleteManga('${item.id}')">Удалить</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            content.innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
         }
     }
 
@@ -403,7 +370,7 @@
                     
                     <div class="form-group">
                         <label class="form-label">Обложка (URL)</label>
-                        <input type="url" class="form-input" id="mangaCover" placeholder="https://example.com/cover.jpg">
+                        <input type="url" class="form-input" id="mangaCover" placeholder="https://images.pexels.com/photos/1591056/pexels-photo-1591056.jpeg">
                     </div>
                     
                     <div class="form-group">
@@ -457,13 +424,28 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Уровень подписки</label>
-                        <select class="form-select" id="mangaSubscriptionTier">
-                            <option value="free">Free</option>
-                            <option value="basic">Basic</option>
-                            <option value="premium">Premium</option>
-                            <option value="vip">VIP</option>
-                        </select>
+                        <label class="form-label">🔑 Доступные подписки (можно выбрать несколько)</label>
+                        <div class="subscription-checkboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
+                            <div class="form-checkbox">
+                                <input type="checkbox" id="subFree" value="free" checked>
+                                <label for="subFree">📖 Любители Манги (Free)</label>
+                            </div>
+                            <div class="form-checkbox">
+                                <input type="checkbox" id="subBasic" value="basic">
+                                <label for="subBasic">🎯 Любители Пика (Basic)</label>
+                            </div>
+                            <div class="form-checkbox">
+                                <input type="checkbox" id="subPremium" value="premium">
+                                <label for="subPremium">👑 Орден Шейхов (Premium)</label>
+                            </div>
+                            <div class="form-checkbox">
+                                <input type="checkbox" id="subVip" value="vip">
+                                <label for="subVip">🌟 Лисямбы (VIP)</label>
+                            </div>
+                        </div>
+                        <small style="color: var(--secondary-color); margin-top: 8px; display: block;">
+                            💡 Пользователи с более высокой подпиской автоматически получают доступ к контенту нижних уровней
+                        </small>
                     </div>
                     
                     <div class="form-actions" style="grid-column: 1 / -1;">
@@ -481,6 +463,12 @@
     async function handleAddManga(e) {
         e.preventDefault();
         
+        // Собираем выбранные подписки
+        const selectedSubscriptions = [];
+        document.querySelectorAll('.subscription-checkboxes input[type="checkbox"]:checked').forEach(checkbox => {
+            selectedSubscriptions.push(checkbox.value);
+        });
+
         const formData = {
             title: document.getElementById('mangaTitle').value,
             description: document.getElementById('mangaDescription').value,
@@ -493,7 +481,8 @@
             total_episodes: parseInt(document.getElementById('mangaTotalEpisodes').value),
             available_episodes: parseInt(document.getElementById('mangaAvailableEpisodes').value),
             donation_goal: parseInt(document.getElementById('mangaDonationGoal').value) * 100, // В копейках
-            subscription_tier: document.getElementById('mangaSubscriptionTier').value
+            subscription_tiers: selectedSubscriptions, // Массив доступных подписок
+            subscription_tier: selectedSubscriptions.includes('free') ? 'free' : selectedSubscriptions[0] // Минимальная подписка
         };
 
         try {
@@ -505,10 +494,158 @@
 
             if (error) throw error;
 
+            // Отправляем уведомления подписчикам если есть доступные серии
+            if (formData.available_episodes > 0 && window.NotificationSystem) {
+                await window.NotificationSystem.createEpisodeNotification(data.id, formData.available_episodes);
+            }
+
             showNotification('Тайтл успешно создан!', 'success');
             loadMangaManagement();
         } catch (error) {
             showNotification('Ошибка создания: ' + error.message, 'error');
+        }
+    }
+
+    // Загрузка управления мангой
+    async function loadMangaManagement() {
+        const content = document.getElementById('manga-content');
+        if (!content) return;
+
+        try {
+            const { data: manga, error } = await window.supabase
+                .from('manga')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            content.innerHTML = `
+                <div class="manga-list">
+                    ${manga.map(item => `
+                        <div class="manga-item">
+                            <div class="manga-item-header">
+                                <div class="manga-item-title">${item.title}</div>
+                                <div class="manga-item-meta">
+                                    ${item.type} • ${item.status} • ${item.available_episodes}/${item.total_episodes} серий
+                                    <br>
+                                    <strong>Подписки:</strong> ${(item.subscription_tiers || [item.subscription_tier]).join(', ')}
+                                </div>
+                            </div>
+                            <div class="manga-item-actions">
+                                <button class="btn btn-secondary" onclick="editManga('${item.id}')">Редактировать</button>
+                                <button class="btn btn-success" onclick="addEpisode('${item.id}')">Добавить серию</button>
+                                <button class="btn btn-danger" onclick="deleteManga('${item.id}')">Удалить</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
+        }
+    }
+
+    // Добавление серии к тайтлу
+    async function addEpisode(mangaId) {
+        const episodeNumber = prompt('Номер новой серии:');
+        if (!episodeNumber || isNaN(episodeNumber)) return;
+
+        try {
+            // Обновляем количество доступных серий
+            const { error } = await window.supabase
+                .from('manga')
+                .update({ 
+                    available_episodes: parseInt(episodeNumber),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', mangaId);
+
+            if (error) throw error;
+
+            // Отправляем уведомления подписчикам
+            if (window.NotificationSystem) {
+                await window.NotificationSystem.createEpisodeNotification(mangaId, parseInt(episodeNumber));
+            }
+
+            showNotification(`Серия ${episodeNumber} добавлена! Уведомления отправлены.`, 'success');
+            loadMangaManagement();
+        } catch (error) {
+            showNotification('Ошибка добавления серии: ' + error.message, 'error');
+        }
+    }
+
+    // Показ формы добавления новости
+    function showAddNewsForm() {
+        const content = document.getElementById('news-content');
+        content.innerHTML = `
+            <div class="form-container">
+                <h3>Добавить новость</h3>
+                <form id="addNewsForm" class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Заголовок</label>
+                        <input type="text" class="form-input" id="newsTitle" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Краткое описание</label>
+                        <textarea class="form-textarea" id="newsExcerpt" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Полный текст</label>
+                        <textarea class="form-textarea" id="newsContent" rows="6"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Изображение (URL)</label>
+                        <input type="url" class="form-input" id="newsImage" placeholder="https://images.pexels.com/photos/1591056/pexels-photo-1591056.jpeg">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select" id="newsCategory">
+                            <option value="Обновление">Обновление</option>
+                            <option value="Каталог">Каталог</option>
+                            <option value="Функции">Функции</option>
+                            <option value="Анонс">Анонс</option>
+                            <option value="Подписки">Подписки</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions" style="grid-column: 1 / -1;">
+                        <button type="submit" class="btn btn-primary">Опубликовать новость</button>
+                        <button type="button" class="btn btn-secondary" onclick="loadNewsManagement()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('addNewsForm').addEventListener('submit', handleAddNews);
+    }
+
+    // Обработка добавления новости
+    async function handleAddNews(e) {
+        e.preventDefault();
+        
+        const formData = {
+            title: document.getElementById('newsTitle').value,
+            excerpt: document.getElementById('newsExcerpt').value,
+            content: document.getElementById('newsContent').value || document.getElementById('newsExcerpt').value,
+            image_url: document.getElementById('newsImage').value || null,
+            category: document.getElementById('newsCategory').value
+        };
+
+        try {
+            const { error } = await window.supabase
+                .from('news')
+                .insert(formData);
+
+            if (error) throw error;
+
+            showNotification('Новость опубликована!', 'success');
+            loadNewsManagement();
+        } catch (error) {
+            showNotification('Ошибка публикации: ' + error.message, 'error');
         }
     }
 
@@ -552,80 +689,6 @@
             `;
         } catch (error) {
             content.innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
-        }
-    }
-
-    // Показ формы добавления новости
-    function showAddNewsForm() {
-        const content = document.getElementById('news-content');
-        content.innerHTML = `
-            <div class="form-container">
-                <h3>Добавить новость</h3>
-                <form id="addNewsForm" class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Заголовок</label>
-                        <input type="text" class="form-input" id="newsTitle" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Краткое описание</label>
-                        <textarea class="form-textarea" id="newsExcerpt" rows="3" required></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Полный текст</label>
-                        <textarea class="form-textarea" id="newsContent" rows="6"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Изображение (URL)</label>
-                        <input type="url" class="form-input" id="newsImage" placeholder="https://example.com/image.jpg">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Категория</label>
-                        <select class="form-select" id="newsCategory">
-                            <option value="Обновление">Обновление</option>
-                            <option value="Каталог">Каталог</option>
-                            <option value="Функции">Функции</option>
-                            <option value="Анонс">Анонс</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions" style="grid-column: 1 / -1;">
-                        <button type="submit" class="btn btn-primary">Опубликовать новость</button>
-                        <button type="button" class="btn btn-secondary" onclick="loadNewsManagement()">Отмена</button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        document.getElementById('addNewsForm').addEventListener('submit', handleAddNews);
-    }
-
-    // Обработка добавления новости
-    async function handleAddNews(e) {
-        e.preventDefault();
-        
-        const formData = {
-            title: document.getElementById('newsTitle').value,
-            excerpt: document.getElementById('newsExcerpt').value,
-            content: document.getElementById('newsContent').value || document.getElementById('newsExcerpt').value,
-            image_url: document.getElementById('newsImage').value || null,
-            category: document.getElementById('newsCategory').value
-        };
-
-        try {
-            const { error } = await window.supabase
-                .from('news')
-                .insert(formData);
-
-            if (error) throw error;
-
-            showNotification('Новость опубликована!', 'success');
-            loadNewsManagement();
-        } catch (error) {
-            showNotification('Ошибка публикации: ' + error.message, 'error');
         }
     }
 
@@ -697,181 +760,6 @@
         }
     }
 
-    // Загрузка управления донатами
-    async function loadDonationsManagement() {
-        const content = document.getElementById('donations-content');
-        if (!content) return;
-
-        try {
-            const { data: donations, error } = await window.supabase
-                .from('donations')
-                .select(`
-                    *,
-                    user:users(username),
-                    manga:manga(title)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (error) throw error;
-
-            const totalAmount = donations.reduce((sum, d) => sum + d.amount, 0);
-            const completedDonations = donations.filter(d => d.status === 'completed');
-
-            content.innerHTML = `
-                <div class="donations-stats">
-                    <div class="donations-stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${donations.length}</div>
-                            <div class="stat-label">Всего донатов</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${completedDonations.length}</div>
-                            <div class="stat-label">Завершенных</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${(totalAmount / 100).toLocaleString()}₽</div>
-                            <div class="stat-label">Общая сумма</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="donation-projects-list">
-                    ${donations.map(donation => `
-                        <div class="donation-project-item">
-                            <div class="donation-project-header">
-                                <div class="donation-project-info">
-                                    <div class="donation-project-title">${donation.manga?.title || 'Неизвестный тайтл'}</div>
-                                    <div class="donation-project-manga">
-                                        От: ${donation.user?.username || 'Аноним'} • 
-                                        ${(donation.amount / 100)}₽ • 
-                                        ${donation.status}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="donation-project-actions">
-                                <span class="status-badge ${donation.status}">${donation.status}</span>
-                                <span style="font-size: 0.75rem; color: var(--secondary-color);">
-                                    ${new Date(donation.created_at).toLocaleString('ru-RU')}
-                                </span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            content.innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
-        }
-    }
-
-    // Загрузка модерации комментариев
-    async function loadCommentsModeration() {
-        const content = document.getElementById('comments-content');
-        if (!content) return;
-
-        try {
-            const { data: comments, error } = await window.supabase
-                .from('comments')
-                .select(`
-                    *,
-                    user:users(username),
-                    manga:manga(title)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (error) throw error;
-
-            content.innerHTML = `
-                <div class="comments-list">
-                    ${comments.map(comment => `
-                        <div class="comment-item">
-                            <div class="comment-header">
-                                <div class="comment-author">
-                                    <div class="comment-author-avatar">${comment.user?.username?.charAt(0).toUpperCase() || 'А'}</div>
-                                    <div>
-                                        <div class="comment-author-name">${comment.user?.username || 'Аноним'}</div>
-                                        <div style="font-size: 0.75rem; color: var(--secondary-color);">
-                                            ${comment.manga?.title || 'Неизвестный тайтл'} • Серия ${comment.episode_number}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="comment-time">${new Date(comment.created_at).toLocaleString('ru-RU')}</div>
-                            </div>
-                            <div class="comment-text">${comment.content}</div>
-                            <div class="comment-actions-row">
-                                <span class="status-badge ${comment.is_moderated ? 'approved' : 'pending'}">
-                                    ${comment.is_moderated ? '✅ Одобрен' : '⏳ На модерации'}
-                                </span>
-                                <span>👍 ${comment.likes}</span>
-                                ${!comment.is_moderated ? `
-                                    <button class="btn btn-success btn-small" onclick="approveComment('${comment.id}')">Одобрить</button>
-                                    <button class="btn btn-danger btn-small" onclick="rejectComment('${comment.id}')">Отклонить</button>
-                                ` : ''}
-                                <button class="btn btn-danger btn-small" onclick="deleteComment('${comment.id}')">Удалить</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            content.innerHTML = `<div class="error">Ошибка загрузки: ${error.message}</div>`;
-        }
-    }
-
-    // Одобрение комментария
-    async function approveComment(commentId) {
-        try {
-            const { error } = await window.supabase
-                .from('comments')
-                .update({ is_moderated: true })
-                .eq('id', commentId);
-
-            if (error) throw error;
-
-            showNotification('Комментарий одобрен', 'success');
-            loadCommentsModeration();
-        } catch (error) {
-            showNotification('Ошибка: ' + error.message, 'error');
-        }
-    }
-
-    // Отклонение комментария
-    async function rejectComment(commentId) {
-        try {
-            const { error } = await window.supabase
-                .from('comments')
-                .update({ is_moderated: false })
-                .eq('id', commentId);
-
-            if (error) throw error;
-
-            showNotification('Комментарий отклонен', 'warning');
-            loadCommentsModeration();
-        } catch (error) {
-            showNotification('Ошибка: ' + error.message, 'error');
-        }
-    }
-
-    // Удаление комментария
-    async function deleteComment(commentId) {
-        if (!confirm('Удалить комментарий?')) return;
-
-        try {
-            const { error } = await window.supabase
-                .from('comments')
-                .delete()
-                .eq('id', commentId);
-
-            if (error) throw error;
-
-            showNotification('Комментарий удален', 'success');
-            loadCommentsModeration();
-        } catch (error) {
-            showNotification('Ошибка: ' + error.message, 'error');
-        }
-    }
-
     // Выход из админки
     async function adminLogout() {
         try {
@@ -910,9 +798,10 @@
     window.handleAddManga = handleAddManga;
     window.handleAddNews = handleAddNews;
     window.deleteNews = deleteNews;
-    window.approveComment = approveComment;
-    window.rejectComment = rejectComment;
-    window.deleteComment = deleteComment;
+    window.addEpisode = addEpisode;
+    window.loadMangaManagement = loadMangaManagement;
+    window.loadNewsManagement = loadNewsManagement;
+    window.loadUsersManagement = loadUsersManagement;
 
     // Инициализация при загрузке
     document.addEventListener('DOMContentLoaded', async function() {
@@ -925,6 +814,6 @@
         }
     });
 
-    console.log('🔧 Продакшен Admin Panel загружена');
+    console.log('🔧 Админ панель загружена');
 
 })();

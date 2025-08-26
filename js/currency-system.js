@@ -1,15 +1,15 @@
-// Система региональных валют для Light Fox Manga
+// Система региональных валют
 (function() {
     'use strict';
 
     // Конфигурация валют по регионам
     const CURRENCY_CONFIG = {
-        'RU': { symbol: '₽', rate: 1, name: 'рубль' },
-        'UA': { symbol: '$', rate: 0.027, name: 'доллар' },
-        'KZ': { symbol: '$', rate: 0.0022, name: 'доллар' },
-        'BY': { symbol: '$', rate: 0.031, name: 'доллар' },
-        'US': { symbol: '$', rate: 0.011, name: 'доллар' },
-        'DEFAULT': { symbol: '$', rate: 0.011, name: 'доллар' }
+        'RU': { symbol: '₽', rate: 1, name: 'рубль', locale: 'ru-RU' },
+        'UA': { symbol: '$', rate: 0.027, name: 'доллар', locale: 'en-US' },
+        'KZ': { symbol: '$', rate: 0.0022, name: 'доллар', locale: 'en-US' },
+        'BY': { symbol: '$', rate: 0.031, name: 'доллар', locale: 'en-US' },
+        'US': { symbol: '$', rate: 0.011, name: 'доллар', locale: 'en-US' },
+        'DEFAULT': { symbol: '$', rate: 0.011, name: 'доллар', locale: 'en-US' }
     };
 
     class CurrencySystem {
@@ -48,16 +48,8 @@
 
         // Инициализация системы
         initializeSystem() {
-            // Сохраняем определенный регион
             localStorage.setItem('user_region', this.currentRegion);
-            
-            // Уведомляем о готовности системы
-            window.dispatchEvent(new CustomEvent('currencySystemReady', {
-                detail: { 
-                    region: this.currentRegion,
-                    currency: this.currentCurrency
-                }
-            }));
+            this.updateAllPrices();
             
             console.log(`💰 Валютная система: ${this.currentRegion} (${this.currentCurrency.symbol})`);
         }
@@ -65,7 +57,7 @@
         // Конвертация суммы
         convertAmount(rubleAmount) {
             if (this.currentRegion === 'RU') {
-                return rubleAmount; // Не округляем рубли
+                return rubleAmount;
             }
             
             const converted = rubleAmount * this.currentCurrency.rate;
@@ -79,8 +71,27 @@
             if (this.currentRegion === 'RU') {
                 return `${converted.toLocaleString('ru-RU')}₽`;
             } else {
-                return `${converted.toLocaleString()}${this.currentCurrency.symbol}`;
+                return `$${converted.toLocaleString()}`;
             }
+        }
+
+        // Обновление всех цен на странице
+        updateAllPrices() {
+            // Обновляем элементы с data-price
+            document.querySelectorAll('[data-price]').forEach(element => {
+                const rublePrice = parseInt(element.dataset.price);
+                if (!isNaN(rublePrice)) {
+                    element.textContent = this.formatAmount(rublePrice);
+                }
+            });
+
+            // Обновляем элементы с data-amount
+            document.querySelectorAll('[data-amount]').forEach(element => {
+                const rubleAmount = parseInt(element.dataset.amount);
+                if (!isNaN(rubleAmount)) {
+                    element.textContent = this.formatAmount(rubleAmount);
+                }
+            });
         }
 
         // Получение текущей валюты
@@ -92,60 +103,17 @@
         getCurrentRegion() {
             return this.currentRegion;
         }
-
-        // Ручная смена региона
-        setRegion(region) {
-            if (CURRENCY_CONFIG[region]) {
-                this.currentRegion = region;
-                this.currentCurrency = CURRENCY_CONFIG[region];
-                localStorage.setItem('user_region', region);
-                
-                // Обновляем все суммы на странице
-                this.updateAllAmounts();
-                
-                console.log(`💰 Регион изменен: ${region} (${this.currentCurrency.symbol})`);
-            }
-        }
-
-        // Обновление всех сумм на странице
-        updateAllAmounts() {
-            // Обновляем донаты
-            document.querySelectorAll('[data-amount]').forEach(element => {
-                const rubleAmount = parseInt(element.dataset.amount);
-                if (!isNaN(rubleAmount)) {
-                    element.textContent = this.formatAmount(rubleAmount);
-                }
-            });
-
-            // Обновляем цены подписок
-            document.querySelectorAll('[data-price]').forEach(element => {
-                const rublePrice = parseInt(element.dataset.price);
-                if (!isNaN(rublePrice)) {
-                    element.textContent = this.formatAmount(rublePrice);
-                }
-            });
-
-            // Уведомляем об обновлении
-            window.dispatchEvent(new CustomEvent('currencyUpdated', {
-                detail: { 
-                    region: this.currentRegion,
-                    currency: this.currentCurrency
-                }
-            }));
-        }
-
-        // Конвертация обратно в рубли (для сохранения)
-        convertToRubles(localAmount) {
-            if (this.currentRegion === 'RU') {
-                return localAmount;
-            }
-            
-            return localAmount / this.currentCurrency.rate;
-        }
     }
 
     // Создаем глобальный экземпляр
     window.CurrencySystem = new CurrencySystem();
+
+    // Обновляем цены при загрузке страницы
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            window.CurrencySystem.updateAllPrices();
+        }, 1000);
+    });
 
     console.log('💰 Система региональных валют загружена');
 

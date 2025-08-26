@@ -2,52 +2,6 @@
 (function() {
     'use strict';
 
-    let isDark = localStorage.getItem('theme') === 'dark';
-
-    // Theme functionality
-    function updateTheme() {
-        document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        
-        const updateIcons = (moonClass, sunClass) => {
-            const moonIcons = document.querySelectorAll(moonClass);
-            const sunIcons = document.querySelectorAll(sunClass);
-            
-            moonIcons.forEach(icon => {
-                icon.style.display = isDark ? 'none' : 'block';
-            });
-            
-            sunIcons.forEach(icon => {
-                icon.style.display = isDark ? 'block' : 'none';
-            });
-        };
-        
-        updateIcons('.moon-icon', '.sun-icon');
-        updateIcons('.mobile-moon-icon', '.mobile-sun-icon');
-        
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-
-    function toggleTheme() {
-        isDark = !isDark;
-        updateTheme();
-    }
-
-    // Language functionality
-    function updateLanguage(lang) {
-        localStorage.setItem('language', lang);
-        
-        const langSwitch = document.getElementById('langSwitch');
-        const mobileLangSwitch = document.getElementById('mobileLangSwitch');
-        
-        if (langSwitch) langSwitch.value = lang;
-        if (mobileLangSwitch) mobileLangSwitch.value = lang;
-        
-        // Применяем переводы
-        if (window.LanguageSystem) {
-            window.LanguageSystem.updateLanguage(lang);
-        }
-    }
-
     // Authentication functionality
     function updateAuthState() {
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -201,6 +155,15 @@
                     category: 'Подписки',
                     image_url: 'https://images.pexels.com/photos/1591373/pexels-photo-1591373.jpeg',
                     created_at: new Date(Date.now() - 259200000).toISOString()
+                },
+                {
+                    id: 5,
+                    title: 'Обновление системы уведомлений',
+                    excerpt: 'Теперь вы будете получать уведомления о новых сериях ваших любимых тайтлов в реальном времени.',
+                    content: 'Подробности об уведомлениях...',
+                    category: 'Обновление',
+                    image_url: 'https://images.pexels.com/photos/1591061/pexels-photo-1591061.jpeg',
+                    created_at: new Date(Date.now() - 345600000).toISOString()
                 }
             ];
         } catch (error) {
@@ -231,8 +194,8 @@
             grid.innerHTML = newsData.map(news => `
                 <div class="news-card" onclick="openNewsDetail(${news.id})">
                     ${news.image_url ? `
-                        <div class="news-image">
-                            <img src="${news.image_url}" alt="${news.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px 8px 0 0;">
+                        <div class="news-image" style="margin-bottom: 16px;">
+                            <img src="${news.image_url}" alt="${news.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
                         </div>
                     ` : ''}
                     <div class="news-content">
@@ -253,8 +216,10 @@
 
     // Открытие детальной новости
     function openNewsDetail(newsId) {
-        // В будущем можно сделать отдельную страницу для новости
-        console.log('Opening news:', newsId);
+        // Пока просто показываем уведомление
+        if (typeof showNotification === 'function') {
+            showNotification('Детальный просмотр новости будет добавлен позже', 'info');
+        }
     }
 
     // Notification function
@@ -302,24 +267,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         console.log('📰 Новости: DOM загружен');
         
-        // Theme toggles
-        const themeToggle = document.getElementById('themeToggle');
-        const mobileThemeToggle = document.getElementById('mobileThemeToggle');
-        
-        if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-        if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
-
-        // Language switches
-        const langSwitch = document.getElementById('langSwitch');
-        const mobileLangSwitch = document.getElementById('mobileLangSwitch');
-        
-        if (langSwitch) {
-            langSwitch.addEventListener('change', (e) => updateLanguage(e.target.value));
-        }
-        if (mobileLangSwitch) {
-            mobileLangSwitch.addEventListener('change', (e) => updateLanguage(e.target.value));
-        }
-
         // Profile buttons
         const profileBtn = document.getElementById('profileBtn');
         const mobileProfileBtn = document.getElementById('mobileProfileBtn');
@@ -337,21 +284,13 @@
         if (menuOverlay) menuOverlay.addEventListener('click', closeMenu);
 
         // Initialize
-        updateTheme();
         updateAuthState();
-        
-        // Load saved language
-        const savedLang = localStorage.getItem('language') || 'ru';
-        updateLanguage(savedLang);
 
         // Load news
         loadNews();
     });
 
     // Export functions globally
-    window.toggleTheme = toggleTheme;
-    window.updateTheme = updateTheme;
-    window.updateLanguage = updateLanguage;
     window.toggleMenu = toggleMenu;
     window.closeMenu = closeMenu;
     window.login = login;
@@ -360,6 +299,7 @@
     window.updateAuthState = updateAuthState;
     window.showNotification = showNotification;
     window.openNewsDetail = openNewsDetail;
+    window.formatTime = formatTime;
 
     console.log('📰 Страница новостей загружена');
 

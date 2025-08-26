@@ -1,16 +1,11 @@
-// Система авторизации для Light Fox Manga
+// Система авторизации с Supabase
 (function() {
     'use strict';
-
-    // Глобальные переменные
-    let isDark = localStorage.getItem('theme') === 'dark';
-    let currentForm = 'login';
 
     // Показ модала авторизации
     function showAuthModal(mode = 'login') {
         const modal = document.getElementById('authModal');
         if (!modal) {
-            // Создаем модал если его нет
             createAuthModal();
         }
         
@@ -49,6 +44,7 @@
                             </div>
                         </div>
                         <div class="auth-panel right">
+                            <button class="close-modal-btn" onclick="closeAuthModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-color);">×</button>
                             <div class="form-container">
                                 <!-- Login Form -->
                                 <div class="auth-form active" id="loginForm">
@@ -171,47 +167,8 @@
         }
     }
 
-    // Theme functionality
-    function updateTheme() {
-        document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        
-        const moonIcon = document.querySelector('.moon-icon');
-        const sunIcon = document.querySelector('.sun-icon');
-        const mobileMoonIcon = document.querySelector('.mobile-moon-icon');
-        const mobileSunIcon = document.querySelector('.mobile-sun-icon');
-        
-        if (moonIcon && sunIcon) {
-            if (isDark) {
-                moonIcon.style.display = 'none';
-                sunIcon.style.display = 'block';
-            } else {
-                moonIcon.style.display = 'block';
-                sunIcon.style.display = 'none';
-            }
-        }
-        
-        if (mobileMoonIcon && mobileSunIcon) {
-            if (isDark) {
-                mobileMoonIcon.style.display = 'none';
-                mobileSunIcon.style.display = 'block';
-            } else {
-                mobileMoonIcon.style.display = 'block';
-                mobileSunIcon.style.display = 'none';
-            }
-        }
-        
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-    
-    function toggleTheme() {
-        isDark = !isDark;
-        updateTheme();
-    }
-
     // Form switching
     function switchToLogin() {
-        currentForm = 'login';
-        
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
         const welcomeMessage = document.getElementById('welcomeMessage');
@@ -229,8 +186,6 @@
     }
 
     function switchToRegister() {
-        currentForm = 'register';
-        
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
         const welcomeMessage = document.getElementById('welcomeMessage');
@@ -348,12 +303,13 @@
 
                 if (error) throw error;
                 
+                // Создаем профиль если его нет
+                await ensureUserProfile(data.user);
+                
                 closeAuthModal();
                 
                 if (typeof window.showNotification === 'function') {
                     window.showNotification('Добро пожаловать!', 'success');
-                } else {
-                    alert('Добро пожаловать!');
                 }
                 
                 // Обновляем состояние авторизации
@@ -361,26 +317,7 @@
                     setTimeout(window.updateAuthState, 100);
                 }
             } else {
-                // Демо режим
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('currentUser', JSON.stringify({
-                    id: Date.now(),
-                    name: email.split('@')[0],
-                    username: email.split('@')[0],
-                    email: email
-                }));
-                
-                closeAuthModal();
-                
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('Добро пожаловать! (Демо режим)', 'success');
-                } else {
-                    alert('Добро пожаловать!');
-                }
-                
-                if (typeof window.updateAuthState === 'function') {
-                    setTimeout(window.updateAuthState, 100);
-                }
+                throw new Error('Supabase не инициализирован');
             }
             
         } catch (error) {
@@ -459,12 +396,15 @@
 
                 if (error) throw error;
                 
+                // Создаем профиль пользователя
+                if (data.user) {
+                    await createUserProfile(data.user, username);
+                }
+                
                 closeAuthModal();
                 
                 if (typeof window.showNotification === 'function') {
                     window.showNotification('Аккаунт создан! Добро пожаловать!', 'success');
-                } else {
-                    alert('Аккаунт создан!');
                 }
                 
                 // Обновляем состояние авторизации
@@ -472,26 +412,7 @@
                     setTimeout(window.updateAuthState, 100);
                 }
             } else {
-                // Демо режим
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('currentUser', JSON.stringify({
-                    id: Date.now(),
-                    name: username,
-                    username: username,
-                    email: email
-                }));
-                
-                closeAuthModal();
-                
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('Аккаунт создан! (Демо режим)', 'success');
-                } else {
-                    alert('Аккаунт создан!');
-                }
-                
-                if (typeof window.updateAuthState === 'function') {
-                    setTimeout(window.updateAuthState, 100);
-                }
+                throw new Error('Supabase не инициализирован');
             }
             
         } catch (error) {
@@ -506,40 +427,62 @@
         }
     }
 
+    // Создание профиля пользователя
+    async function createUserProfile(user, username) {
+        try {
+            const { error } = await window.supabase
+                .from('users')
+                .insert({
+                    id: user.id,
+                    email: user.email,
+                    username: username
+                });
+
+            if (error && error.code !== '23505') { // Игнорируем ошибку дублирования
+                console.error('Create profile error:', error);
+            }
+        } catch (error) {
+            console.error('Create user profile error:', error);
+        }
+    }
+
+    // Обеспечение существования профиля
+    async function ensureUserProfile(user) {
+        try {
+            const { data: profile, error } = await window.supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (error && error.code === 'PGRST116') {
+                // Профиль не найден, создаем
+                await createUserProfile(user, user.user_metadata?.username || user.email.split('@')[0]);
+            }
+        } catch (error) {
+            console.error('Ensure user profile error:', error);
+        }
+    }
+
     // Google Auth
     async function loginWithGoogle() {
         try {
             if (window.supabase && window.supabase.auth.signInWithOAuth) {
                 const { data, error } = await window.supabase.auth.signInWithOAuth({
-                    provider: 'google'
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin
+                    }
                 });
 
                 if (error) throw error;
             } else {
-                // Демо режим
-                const email = 'google.user@gmail.com';
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('currentUser', JSON.stringify({
-                    id: Date.now(),
-                    name: 'Google User',
-                    username: 'Google User',
-                    email: email
-                }));
-                
-                closeAuthModal();
-                
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('Вход через Google (Демо)', 'success');
-                }
-                
-                if (typeof window.updateAuthState === 'function') {
-                    setTimeout(window.updateAuthState, 100);
-                }
+                throw new Error('Google авторизация недоступна');
             }
         } catch (error) {
             console.error('Google login error:', error);
             if (typeof window.showNotification === 'function') {
-                window.showNotification('Ошибка входа через Google', 'error');
+                window.showNotification('Ошибка входа через Google: ' + error.message, 'error');
             }
         }
     }
@@ -548,28 +491,16 @@
         await loginWithGoogle(); // Тот же процесс
     }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        updateTheme();
-    });
-    
     // Export functions globally
     window.showAuthModal = showAuthModal;
     window.closeAuthModal = closeAuthModal;
     window.switchToLogin = switchToLogin;
     window.switchToRegister = switchToRegister;
-    window.toggleTheme = toggleTheme;
     window.handleLogin = handleLogin;
     window.handleRegister = handleRegister;
     window.loginWithGoogle = loginWithGoogle;
     window.registerWithGoogle = registerWithGoogle;
-    window.validateEmail = validateEmail;
-    window.validatePassword = validatePassword;
-    window.showError = showError;
-    window.clearError = clearError;
-    window.clearAllErrors = clearAllErrors;
-    window.updateTheme = updateTheme;
 
-    console.log('🔐 Light Fox Manga Auth System загружена');
+    console.log('🔐 Система авторизации загружена');
 
 })();
